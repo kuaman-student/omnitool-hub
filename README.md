@@ -1,6 +1,6 @@
 # ⚡ OmniTool Hub — 1,050+ All-in-One Client-Side Toolkit
 
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-GitHub_Pages-2ea44f?style=for-the-badge)](https://YOUR-GITHUB-USERNAME.github.io/omnitool-hub/)
+[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-GitHub_Pages-2ea44f?style=for-the-badge)](https://kuaman-student.github.io/omnitool-hub/)
 ![Version](https://img.shields.io/badge/Version-4.0_Ultra-6366f1?style=for-the-badge)
 ![Tools](https://img.shields.io/badge/Tools-1,050+-10b981?style=for-the-badge)
 ![Categories](https://img.shields.io/badge/Categories-28-f59e0b?style=for-the-badge)
