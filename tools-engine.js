@@ -179,10 +179,11 @@ const ToolEngine = {
         </div>
 
         <div class="border-2 border-dashed theme-border rounded-2xl p-6 text-center hover:opacity-95 transition">
-          <input type="file" id="imgToPdfInput" accept="image/png,image/jpeg,image/webp,image/*" multiple class="hidden" />
+          <input type="file" id="imgToPdfInput" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" multiple class="hidden" />
           <label for="imgToPdfInput" class="cursor-pointer flex flex-col items-center">
             <i data-lucide="images" class="w-10 h-10 accent-text mb-2"></i>
             <span class="text-sm font-bold theme-text-primary">Click to select Images (PNG, JPG, WebP — Multiple supported)</span>
+            <span class="text-[11px] theme-text-muted mt-1">Image files only — PDF documents are not accepted.</span>
             <span class="text-xs theme-text-muted mt-1" id="imgToPdfStatus">No images selected yet</span>
           </label>
         </div>
@@ -199,7 +200,7 @@ const ToolEngine = {
             </select>
           </div>
           <div class="flex items-end">
-            <button id="buildImgPdfBtn" class="w-full py-2.5 px-4 rounded-xl accent-gradient text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-lg">
+            <button id="buildImgPdfBtn" disabled class="w-full py-2.5 px-4 rounded-xl accent-gradient text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed">
               <i data-lucide="file-check-2" class="w-4 h-4"></i> Convert Selected Images to PDF
             </button>
           </div>
@@ -214,22 +215,49 @@ const ToolEngine = {
     const status = container.querySelector("#imgToPdfStatus");
     const strip = container.querySelector("#imgPreviewStrip");
     const outBox = container.querySelector("#imgPdfOutBox");
+    const convertBtn = container.querySelector("#buildImgPdfBtn");
+    let selectedImages = [];
+    let previewUrls = [];
+
+    const clearPreviews = () => {
+      previewUrls.forEach(URL.revokeObjectURL);
+      previewUrls = [];
+      strip.innerHTML = "";
+      strip.classList.add("hidden");
+    };
+
+    this.activeCleanup = clearPreviews;
 
     inp.addEventListener("change", () => {
       const files = Array.from(inp.files);
+      clearPreviews();
+      const supportedMimeTypes = ["image/png", "image/jpeg", "image/webp"];
+      const isSupportedImage = (file) => {
+        const extensionMatches = /\.(png|jpe?g|webp)$/i.test(file.name);
+        return supportedMimeTypes.includes(file.type) || (!file.type && extensionMatches);
+      };
+      const unsupportedFiles = files.filter(file => !isSupportedImage(file));
+      if (unsupportedFiles.length) {
+        selectedImages = [];
+        convertBtn.disabled = true;
+        status.textContent = `Unsupported file(s): ${unsupportedFiles.map(file => file.name).join(", ")}. Select PNG, JPG, or WebP images only.`;
+        return;
+      }
+
+      selectedImages = files;
+      convertBtn.disabled = files.length === 0;
       status.textContent = files.length ? `${files.length} image(s) ready: ${files.map(f => f.name).join(", ")}` : "No images selected";
-      strip.innerHTML = "";
       if (files.length) {
         strip.classList.remove("hidden");
         files.forEach(file => {
           const url = URL.createObjectURL(file);
+          previewUrls.push(url);
           const img = document.createElement("img");
           img.src = url;
+          img.alt = file.name;
           img.className = "h-20 w-auto rounded-lg border theme-border object-cover shrink-0";
           strip.appendChild(img);
         });
-      } else {
-        strip.classList.add("hidden");
       }
     });
 
@@ -237,21 +265,28 @@ const ToolEngine = {
     const fileToPngBytes = (file) => new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
+        URL.revokeObjectURL(imageUrl);
         const c = document.createElement("canvas");
         c.width = img.naturalWidth;
         c.height = img.naturalHeight;
-        c.getContext("2d").drawImage(img, 0, 0);
+        const context = c.getContext("2d");
+        if (!context) return reject(new Error("Canvas is unavailable for image conversion"));
+        context.drawImage(img, 0, 0);
         c.toBlob(async (blob) => {
           if (!blob) return reject(new Error("Canvas conversion failed"));
           resolve({ bytes: await blob.arrayBuffer(), w: img.naturalWidth, h: img.naturalHeight });
         }, "image/png");
       };
-      img.onerror = reject;
-      img.src = URL.createObjectURL(file);
+      const imageUrl = URL.createObjectURL(file);
+      img.onerror = () => {
+        URL.revokeObjectURL(imageUrl);
+        reject(new Error(`Could not read ${file.name} as an image`));
+      };
+      img.src = imageUrl;
     });
 
-    container.querySelector("#buildImgPdfBtn").addEventListener("click", async () => {
-      const files = Array.from(inp.files);
+    convertBtn.addEventListener("click", async () => {
+      const files = selectedImages;
       if (!files.length) return alert("Please select at least one image (PNG, JPG, WebP) first!");
 
       outBox.classList.remove("hidden");
