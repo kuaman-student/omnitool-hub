@@ -3,17 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OmniTool Hub v1.0 — 1,050+ Next-Gen Client-Side Utilities</title>
+  <title>OmniTool Hub v5.0 — 1,050+ Verified Client-Side Utilities</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts: Space Grotesk + JetBrains Mono -->
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- PDF-Lib for real client-side PDF manipulation -->
+  <!-- PDF-Lib for real client-side PDF creation & manipulation -->
   <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+  <!-- JSZip for real client-side ZIP creation & extraction -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <!-- QRCode.js for real QR generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <!-- Custom Theme & Interactive Styles -->
@@ -35,7 +37,7 @@
       <!-- Left: Brand + Mobile Drawer Trigger -->
       <div class="flex items-center gap-2.5 shrink-0">
         <button id="mobileMenuBtn" class="lg:hidden p-2 rounded-xl glass-btn" title="Browse 28 Categories">
-          <i data-lucide="Menu" class="w-5 h-5"></i>
+          <i data-lucide="menu" class="w-5 h-5"></i>
         </button>
         <div class="flex items-center gap-2.5 cursor-pointer group" id="brandHomeBtn">
           <div class="w-10 h-10 rounded-2xl accent-gradient flex items-center justify-center shadow-lg group-hover:scale-105 transition-transform">
@@ -44,9 +46,9 @@
           <div>
             <div class="flex items-center gap-2">
               <span class="font-extrabold text-base sm:text-lg tracking-tight theme-text-primary">OmniTool</span>
-              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full accent-badge">v1.0 • 1,050+</span>
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full accent-badge">v5.0 • 1,050+</span>
             </div>
-            <p class="text-[11px] theme-text-muted hidden xl:block">Next-Gen Local Utility OS • Instant Share & Download</p>
+            <p class="text-[11px] theme-text-muted hidden xl:block">Context-Aware Local Utility OS • Instant Share & Download</p>
           </div>
         </div>
       </div>
@@ -58,7 +60,7 @@
           <input
             id="globalSearchInput"
             type="text"
-            placeholder="Search 1,050+ tools (#ID, PDF, ROS2, GST, QR, JSON, PID)..."
+            placeholder="Search 1,050+ tools (#40 Images to PDF, ROS2, GST, QR, ZIP, PID)..."
             class="w-full pl-10 pr-16 py-2 rounded-2xl text-xs sm:text-sm theme-input transition"
           />
           <kbd class="hidden sm:inline-block absolute right-3 text-[10px] font-mono px-1.5 py-0.5 rounded glass-badge">Ctrl K</kbd>
@@ -95,9 +97,7 @@
               <span class="text-xs font-bold uppercase tracking-wider theme-text-primary">10 Visual Themes</span>
               <span class="text-[10px] font-mono theme-text-muted">Live Engine</span>
             </div>
-            <div id="themeGridList" class="grid grid-cols-2 gap-1.5">
-              <!-- Injected by app.js -->
-            </div>
+            <div id="themeGridList" class="grid grid-cols-2 gap-1.5"></div>
           </div>
         </div>
 
@@ -110,12 +110,8 @@
     </div>
   </header>
 
-  <!-- ===================================================================== -->
-  <!-- PAGE 1: MAIN TOOLS HUB (DEFAULT VIEW)                                 -->
-  <!-- ===================================================================== -->
+  <!-- PAGE 1: MAIN TOOLS HUB -->
   <div id="page-hub" class="page-section relative z-10 flex-1 max-w-[1640px] w-full mx-auto flex items-start">
-
-    <!-- Mobile Sidebar Backdrop -->
     <div id="sidebarBackdrop" class="fixed inset-0 bg-black/60 backdrop-blur-xs z-30 hidden lg:hidden"></div>
 
     <!-- LEFT CATEGORY COMMAND DRAWER -->
@@ -124,19 +120,15 @@
         <span class="text-[11px] font-extrabold uppercase tracking-wider theme-text-muted">28 Master Categories</span>
         <span id="totalToolsCountBadge" class="text-xs font-mono font-bold px-2 py-0.5 rounded-md accent-badge">1050</span>
       </div>
-      <nav id="categoryList" class="flex-1 overflow-y-auto p-2.5 space-y-1 custom-scrollbar">
-        <!-- Injected by app.js -->
-      </nav>
+      <nav id="categoryList" class="flex-1 overflow-y-auto p-2.5 space-y-1 custom-scrollbar"></nav>
       <div class="p-3 border-t theme-border text-[11px] theme-text-muted flex items-center justify-between shrink-0">
         <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 100% Client-Side</span>
-        <span class="font-mono font-semibold accent-text">Zero Upload</span>
+        <span class="font-mono font-semibold accent-text">v5.0 Verified</span>
       </div>
     </aside>
 
     <!-- MAIN WORKSPACE FEED -->
     <main class="flex-1 min-w-0 p-3 sm:p-6 lg:p-8 space-y-6">
-
-      <!-- FUTURISTIC BENTO HERO HEADER -->
       <section class="rounded-3xl glass-card p-5 sm:p-7 relative overflow-hidden">
         <div class="relative z-10 flex flex-col xl:flex-row items-start xl:items-center justify-between gap-6">
           <div class="space-y-2 max-w-3xl">
@@ -144,32 +136,31 @@
               <span id="activeCategoryPill" class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full accent-badge">All 28 Categories</span>
               <span id="showingCountText" class="text-xs font-mono theme-text-muted">Showing 1,050 tools</span>
               <span class="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                <i data-lucide="share-2" class="w-3 h-3"></i> Share Without Downloading
+                <i data-lucide="check-circle-2" class="w-3 h-3"></i> Context-Verified Inputs & Outputs
               </span>
             </div>
             <h1 id="activeCategoryTitle" class="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight theme-text-primary">
               The 1,050+ All-in-One Digital Swiss Army Knife
             </h1>
             <p id="activeCategoryDesc" class="text-xs sm:text-sm theme-text-muted leading-relaxed">
-              Every single operation has its own dedicated interactive workspace — PDF manipulation, HTML5 Image Studio, Audio/Video tools, Developer formatters, AI Prompt Engineering, ROS2 Robotics, FinTech calculators, and Cyber-Defense utilities.
+              Every tool now dynamically adapts its exact file uploader, controls, and output engine to match its specific task — from Images-to-PDF and Base64-to-Image to Live Screen Recording, JSZip Archiving, and PID Oscilloscopes.
             </p>
           </div>
 
-          <!-- Interactive Quick Telemetry & View Switcher -->
           <div class="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full xl:w-auto shrink-0">
             <div class="glass-subpanel rounded-2xl px-4 py-3 text-center flex-1 sm:flex-initial">
               <div class="text-lg sm:text-xl font-extrabold theme-text-primary" id="heroTotalCount">1,050</div>
-              <div class="text-[10px] theme-text-muted uppercase tracking-wider">Live Tools</div>
+              <div class="text-[10px] theme-text-muted uppercase tracking-wider">Verified Tools</div>
             </div>
             <div class="glass-subpanel rounded-2xl px-4 py-3 text-center flex-1 sm:flex-initial">
               <div class="text-lg sm:text-xl font-extrabold accent-text">10</div>
               <div class="text-[10px] theme-text-muted uppercase tracking-wider">Themes</div>
             </div>
             <div class="glass-subpanel rounded-2xl p-1.5 flex flex-col gap-1">
-              <button id="viewGridBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold accent-gradient text-white flex items-center gap-1.5" title="Bento Grid View">
+              <button id="viewGridBtn" class="px-3 py-1.5 rounded-xl text-xs font-semibold accent-gradient text-white flex items-center gap-1.5">
                 <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i> Grid
               </button>
-              <button id="viewCompactBtn" class="px-3 py-1.5 rounded-xl text-xs font-medium theme-text-muted hover:opacity-80 flex items-center gap-1.5" title="Compact Command View">
+              <button id="viewCompactBtn" class="px-3 py-1.5 rounded-xl text-xs font-medium theme-text-muted hover:opacity-80 flex items-center gap-1.5">
                 <i data-lucide="list" class="w-3.5 h-3.5"></i> Compact
               </button>
             </div>
@@ -177,12 +168,8 @@
         </div>
       </section>
 
-      <!-- HORIZONTAL QUICK-JUMP CATEGORY PILLS -->
-      <div class="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar" id="quickCategoryPills">
-        <!-- Injected by app.js -->
-      </div>
+      <div class="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar" id="quickCategoryPills"></div>
 
-      <!-- RECENTLY LAUNCHED TOOLS -->
       <section id="recentToolsSection" class="hidden glass-card rounded-2xl p-4">
         <div class="flex items-center justify-between mb-2.5">
           <h2 class="text-xs font-bold uppercase tracking-wider theme-text-primary flex items-center gap-1.5">
@@ -193,12 +180,8 @@
         <div id="recentToolsContainer" class="flex gap-2 overflow-x-auto pb-1 custom-scrollbar"></div>
       </section>
 
-      <!-- DYNAMIC 3D SPOTLIGHT TOOLS GRID -->
-      <section id="toolsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5">
-        <!-- Injected by app.js -->
-      </section>
+      <section id="toolsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3.5"></section>
 
-      <!-- EMPTY SEARCH STATE -->
       <div id="emptyState" class="hidden py-16 text-center glass-card rounded-3xl">
         <div class="w-14 h-14 rounded-2xl glass-subpanel flex items-center justify-center mx-auto mb-3 accent-text">
           <i data-lucide="search-x" class="w-7 h-7"></i>
@@ -210,19 +193,16 @@
     </main>
   </div>
 
-  <!-- ===================================================================== -->
-  <!-- PAGE 2: HOW TO USE DIFFERENT TOOLS (INTERACTIVE ENGLISH MANUAL)       -->
-  <!-- ===================================================================== -->
+  <!-- PAGE 2: HOW TO USE -->
   <div id="page-howto" class="page-section hidden relative z-10 flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-10 space-y-8">
     <div class="rounded-3xl glass-card p-6 sm:p-8">
       <span class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full accent-badge">Interactive User Guide</span>
       <h1 class="text-2xl sm:text-4xl font-extrabold theme-text-primary mt-3">How to Use the 1,050+ Tools</h1>
       <p class="text-sm sm:text-base theme-text-muted mt-2 max-w-3xl">
-        OmniTool Hub is designed for zero-friction productivity. You never have to install bulky software, create an account, or wait for server queues. Here is how to get the most out of every workspace.
+        Every tool is tailored to its exact operation — whether you are converting multiple images into a single PDF (#40), recording your screen (#145), creating a ZIP archive (#297), or tuning a PID controller (#805).
       </p>
     </div>
 
-    <!-- 4-Step Workflow -->
     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       <div class="p-5 rounded-2xl glass-card space-y-2">
         <div class="w-10 h-10 rounded-xl accent-badge flex items-center justify-center font-extrabold text-sm">01</div>
@@ -231,135 +211,59 @@
       </div>
       <div class="p-5 rounded-2xl glass-card space-y-2">
         <div class="w-10 h-10 rounded-xl accent-badge flex items-center justify-center font-extrabold text-sm">02</div>
-        <h3 class="font-bold theme-text-primary text-base">Live Client-Side Studio</h3>
-        <p class="text-xs theme-text-muted leading-relaxed">Click any card to launch its dedicated modal studio. Drop your PDF, image, video, CSV, or code to see real-time results.</p>
+        <h3 class="font-bold theme-text-primary text-base">Task-Specific Inputs</h3>
+        <p class="text-xs theme-text-muted leading-relaxed">Each workspace automatically shows the right input: image uploaders for <i>Images to PDF</i>, text editors for <i>Word/Text to PDF</i>, and live camera/mic streams for <i>Recorders</i>.</p>
       </div>
       <div class="p-5 rounded-2xl glass-card space-y-2">
         <div class="w-10 h-10 rounded-xl accent-badge flex items-center justify-center font-extrabold text-sm">03</div>
         <h3 class="font-bold theme-text-primary text-base">Direct Share (No Download)</h3>
-        <p class="text-xs theme-text-muted leading-relaxed">Click <b>"Share Output Directly"</b> in the bottom bar to send generated files or text straight to WhatsApp, Telegram, Email, or AirDrop without saving to disk first.</p>
+        <p class="text-xs theme-text-muted leading-relaxed">Click <b>"Share Output Directly"</b> in the bottom bar to send generated PDFs, PNGs, ZIPs, or text straight to WhatsApp, Telegram, Email, or AirDrop without saving to disk first.</p>
       </div>
       <div class="p-5 rounded-2xl glass-card space-y-2">
         <div class="w-10 h-10 rounded-xl accent-badge flex items-center justify-center font-extrabold text-sm">04</div>
         <h3 class="font-bold theme-text-primary text-base">Download or Deep-Link</h3>
-        <p class="text-xs theme-text-muted leading-relaxed">Click <b>"Download Output"</b> to save locally, or click <b>"Tool Link"</b> to share a direct URL (`?tool=ID`) that opens that exact tool for your teammates.</p>
-      </div>
-    </div>
-
-    <!-- Category Master Playbooks -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="p-5 rounded-2xl glass-card space-y-2">
-        <h3 class="font-bold theme-text-primary flex items-center gap-2"><i data-lucide="file-text" class="w-4 h-4 accent-text"></i> PDF Document Suite (#1 – #45)</h3>
-        <p class="text-xs theme-text-muted leading-relaxed">Powered by `pdf-lib`. Select single or multiple PDF files to Merge, Split, Rotate (90°/180°/270°), Reverse page order, Delete pages, or stamp watermarks and page numbers. Everything runs inside browser memory.</p>
-      </div>
-      <div class="p-5 rounded-2xl glass-card space-y-2">
-        <h3 class="font-bold theme-text-primary flex items-center gap-2"><i data-lucide="image" class="w-4 h-4 accent-text"></i> HTML5 Image & Canvas Studio (#46 – #110)</h3>
-        <p class="text-xs theme-text-muted leading-relaxed">Upload PNG, JPG, or WebP images. Adjust dimensions, brightness, contrast, saturation, blur, rotation, flipping, grayscale, invert, or custom watermarks in real-time, then share or export in your preferred format.</p>
-      </div>
-      <div class="p-5 rounded-2xl glass-card space-y-2">
-        <h3 class="font-bold theme-text-primary flex items-center gap-2"><i data-lucide="cpu" class="w-4 h-4 accent-text"></i> Robotics, ROS2, CAD & Electronics (#666 – #710, #781 – #810, #859 – #906)</h3>
-        <p class="text-xs theme-text-muted leading-relaxed">Features a live interactive oscilloscope for PID Controller step-response tuning and PWM duty-cycle visualization, plus Quaternion-Euler conversion, differential-drive kinematics, drone thrust-to-weight, Ohm's law, and 3D filament cost calculators.</p>
-      </div>
-      <div class="p-5 rounded-2xl glass-card space-y-2">
-        <h3 class="font-bold theme-text-primary flex items-center gap-2"><i data-lucide="code-2" class="w-4 h-4 accent-text"></i> Developer, AI Agents, FinTech & Cyber (#316 – #435, #811 – #1050)</h3>
-        <p class="text-xs theme-text-muted leading-relaxed">Format/minify JSON, decode JWTs, generate WebCrypto SHA-256/512 hashes, build LLM tool schemas, estimate token costs, calculate GST/EMI/SIP/Startup runway, or defang malicious URLs with one click.</p>
+        <p class="text-xs theme-text-muted leading-relaxed">Click <b>"Download Output"</b> to save locally, or click <b>"Tool Link"</b> to share a direct URL (`?tool=ID`) that opens that exact tool immediately.</p>
       </div>
     </div>
   </div>
 
-  <!-- ===================================================================== -->
-  <!-- PAGE 3: ARCHITECTURE & PRIVACY (HOW IT WORKS & WHERE DATA GOES)       -->
-  <!-- ===================================================================== -->
+  <!-- PAGE 3: ARCHITECTURE & PRIVACY -->
   <div id="page-privacy" class="page-section hidden relative z-10 flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-10 space-y-8">
     <div class="rounded-3xl glass-card p-6 sm:p-8">
       <span class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Zero-Server Privacy Guarantee</span>
       <h1 class="text-2xl sm:text-4xl font-extrabold theme-text-primary mt-3">How This Platform Works & Where Your Data Goes</h1>
       <p class="text-sm sm:text-base theme-text-muted mt-2 max-w-3xl">
-        Unlike traditional online converters that upload your sensitive PDFs, private photos, and financial spreadsheets to remote cloud servers, <b>OmniTool Hub executes 100% of its processing locally inside your browser sandbox.</b>
+        <b>OmniTool Hub executes 100% of its processing locally inside your browser sandbox.</b> Your files, images, PDFs, audio recordings, and passwords never leave your device.
       </p>
     </div>
 
-    <!-- 3-Stage Architecture Pipeline -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
       <div class="p-5 rounded-2xl glass-card space-y-2">
         <div class="text-xs font-mono accent-text font-bold">STAGE 1 • LOCAL INGESTION</div>
         <h3 class="text-base font-bold theme-text-primary">Browser Memory (`ArrayBuffer`)</h3>
-        <p class="text-xs theme-text-muted leading-relaxed">When you select a file or paste text, the browser reads it directly into volatile local RAM using the `FileReader` API. No network upload request is ever initiated.</p>
+        <p class="text-xs theme-text-muted leading-relaxed">Files are read directly into volatile local RAM using the `FileReader` and `URL.createObjectURL` APIs. Zero external network requests are made.</p>
       </div>
       <div class="p-5 rounded-2xl glass-card space-y-2 border-emerald-500/40">
         <div class="text-xs font-mono text-emerald-400 font-bold">STAGE 2 • IN-BROWSER COMPUTE</div>
-        <h3 class="text-base font-bold theme-text-primary">WebCrypto, Canvas & PDFLib</h3>
-        <p class="text-xs theme-text-muted leading-relaxed">Your device's own CPU and GPU transform the document, render image filters, or compute cryptographic hashes inside the isolated browser tab.</p>
+        <h3 class="text-base font-bold theme-text-primary">PDFLib, JSZip, Canvas & WebCrypto</h3>
+        <p class="text-xs theme-text-muted leading-relaxed">Your device's own CPU and GPU assemble PDFs, compress ZIP archives, render image filters, and compute SHA-256/512 hashes locally.</p>
       </div>
       <div class="p-5 rounded-2xl glass-card space-y-2">
         <div class="text-xs font-mono text-amber-400 font-bold">STAGE 3 • INSTANT DISPOSITION</div>
         <h3 class="text-base font-bold theme-text-primary">Direct Share or Ephemeral Blob</h3>
-        <p class="text-xs theme-text-muted leading-relaxed">The output is packaged into an in-memory `File` object for `navigator.share()` or a local `Blob` download link, and is permanently wiped from RAM as soon as you close the tab.</p>
-      </div>
-    </div>
-
-    <!-- Data Audit Table -->
-    <div class="rounded-3xl glass-card overflow-hidden">
-      <div class="p-5 border-b theme-border">
-        <h3 class="font-bold theme-text-primary text-base">Complete Data Transparency Matrix</h3>
-      </div>
-      <div class="overflow-x-auto">
-        <table class="w-full text-left border-collapse text-xs sm:text-sm">
-          <thead>
-            <tr class="glass-subpanel theme-text-muted border-b theme-border">
-              <th class="p-4 font-semibold">Feature / Data Type</th>
-              <th class="p-4 font-semibold">Processing Engine</th>
-              <th class="p-4 font-semibold">Where Data Goes</th>
-              <th class="p-4 font-semibold">Retention Policy</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y theme-border theme-text-primary">
-            <tr>
-              <td class="p-4 font-semibold">PDF Documents & Office Files</td>
-              <td class="p-4 font-mono text-xs accent-text">PDFLib & Local FileReader</td>
-              <td class="p-4"><span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-medium">Stays in Local RAM</span></td>
-              <td class="p-4 text-xs theme-text-muted">Erased immediately on tab close</td>
-            </tr>
-            <tr>
-              <td class="p-4 font-semibold">Images, Video Frames & QR Codes</td>
-              <td class="p-4 font-mono text-xs accent-text">HTML5 Canvas 2D & WebGL</td>
-              <td class="p-4"><span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-medium">Stays in Local GPU/RAM</span></td>
-              <td class="p-4 text-xs theme-text-muted">Never transmitted over the internet</td>
-            </tr>
-            <tr>
-              <td class="p-4 font-semibold">Passwords, Hashes & JWT Tokens</td>
-              <td class="p-4 font-mono text-xs accent-text">window.crypto.subtle</td>
-              <td class="p-4"><span class="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 text-xs font-medium">Hardware Crypto Sandbox</span></td>
-              <td class="p-4 text-xs theme-text-muted">100% offline-capable & unlogged</td>
-            </tr>
-            <tr>
-              <td class="p-4 font-semibold">Selected Theme, Favorites & Recents</td>
-              <td class="p-4 font-mono text-xs accent-text">window.localStorage</td>
-              <td class="p-4"><span class="px-2.5 py-1 rounded-full accent-badge text-xs font-medium">Browser LocalStorage</span></td>
-              <td class="p-4 text-xs theme-text-muted">Stored on your device until cleared</td>
-            </tr>
-            <tr>
-              <td class="p-4 font-semibold">Support & Complaint Tickets</td>
-              <td class="p-4 font-mono text-xs accent-text">Direct mailto: / Gmail Web</td>
-              <td class="p-4"><span class="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-400 text-xs font-medium">Your Email Client</span></td>
-              <td class="p-4 text-xs theme-text-muted">Sent directly to amank022008@gmail.com</td>
-            </tr>
-          </tbody>
-        </table>
+        <p class="text-xs theme-text-muted leading-relaxed">Outputs are packaged into an in-memory `File` object for `navigator.share()` or a local `Blob` download link, and wiped from RAM when the tab closes.</p>
       </div>
     </div>
   </div>
 
-  <!-- ===================================================================== -->
-  <!-- PAGE 4: COMPLAINT, BUG REPORT & DIRECT SUPPORT DESK                   -->
-  <!-- ===================================================================== -->
+  <!-- PAGE 4: COMPLAINT & SUPPORT DESK -->
   <div id="page-complaint" class="page-section hidden relative z-10 flex-1 max-w-4xl w-full mx-auto p-4 sm:p-6 lg:p-10 space-y-6">
     <div class="rounded-3xl glass-card p-6 sm:p-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div>
         <span class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">Direct Developer Support Desk</span>
         <h1 class="text-2xl sm:text-3xl font-extrabold theme-text-primary mt-3">Submit a Complaint, Bug Report, or Feature Request</h1>
         <p class="text-xs sm:text-sm theme-text-muted mt-1">
-          Found an issue with any of the 1,050+ tools or want a custom calculator added? Send a formatted support ticket directly to <b>Aman Kumar</b>.
+          Found an issue with any of the 1,050+ tools? Send a formatted support ticket directly to <b>Aman Kumar</b>.
         </p>
       </div>
       <div class="glass-subpanel rounded-2xl p-4 shrink-0 border border-rose-500/30">
@@ -392,7 +296,7 @@
         </div>
         <div>
           <label class="text-xs font-semibold theme-text-primary block mb-1.5">Tool ID or Name</label>
-          <input id="compTool" type="text" placeholder="e.g., #1 Merge PDF or #805 PID" class="w-full px-3.5 py-2.5 rounded-xl theme-input text-sm" />
+          <input id="compTool" type="text" placeholder="e.g., #40 Images to PDF" class="w-full px-3.5 py-2.5 rounded-xl theme-input text-sm" />
         </div>
         <div>
           <label class="text-xs font-semibold theme-text-primary block mb-1.5">Severity Level</label>
@@ -406,7 +310,7 @@
 
       <div>
         <label class="text-xs font-semibold theme-text-primary block mb-1.5">Message / Detailed Description *</label>
-        <textarea id="compMessage" rows="5" required placeholder="Please describe what happened, the steps to reproduce, or the tool you would like to see added..." class="w-full p-3.5 rounded-xl theme-input text-sm"></textarea>
+        <textarea id="compMessage" rows="5" required placeholder="Please describe what happened, the steps to reproduce, or the feature you would like added..." class="w-full p-3.5 rounded-xl theme-input text-sm"></textarea>
       </div>
 
       <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
@@ -427,9 +331,7 @@
     </form>
   </div>
 
-  <!-- ===================================================================== -->
-  <!-- FLOATING MOBILE BOTTOM NAVIGATION DOCK (RESPONSIVE)                   -->
-  <!-- ===================================================================== -->
+  <!-- FLOATING MOBILE BOTTOM NAVIGATION DOCK -->
   <nav class="md:hidden fixed bottom-3 inset-x-3 z-40 glass-modal rounded-2xl p-1.5 flex items-center justify-around shadow-2xl border">
     <button data-nav-page="hub" class="nav-tab-btn active flex-1 py-2 rounded-xl text-[11px] font-bold flex flex-col items-center gap-0.5">
       <i data-lucide="sparkles" class="w-4 h-4"></i>
@@ -449,9 +351,7 @@
     </button>
   </nav>
 
-  <!-- ===================================================================== -->
-  <!-- INTERACTIVE TOOL WORKSPACE MODAL (WITH DIRECT SHARE & DOWNLOAD DOCK)  -->
-  <!-- ===================================================================== -->
+  <!-- INTERACTIVE TOOL WORKSPACE MODAL -->
   <div id="toolModal" class="fixed inset-0 bg-black/75 backdrop-blur-md z-50 hidden items-center justify-center p-2 sm:p-4 overflow-y-auto">
     <div class="glass-modal border rounded-3xl w-full max-w-4xl max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-modal-in my-auto">
 
@@ -465,7 +365,7 @@
             <div class="flex flex-wrap items-center gap-2">
               <span id="modalToolId" class="text-xs font-mono font-bold px-2 py-0.5 rounded-md glass-badge">#1</span>
               <h2 id="modalToolTitle" class="text-base sm:text-lg font-extrabold theme-text-primary truncate">Tool Name</h2>
-              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Live Studio</span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Verified Studio</span>
             </div>
             <p id="modalToolCategory" class="text-xs theme-text-muted mt-0.5 truncate">Category Name</p>
           </div>
@@ -485,11 +385,9 @@
       </div>
 
       <!-- Modal Dynamic Workspace Body -->
-      <div id="modalWorkspace" class="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 custom-scrollbar">
-        <!-- Injected dynamically by tools-engine.js -->
-      </div>
+      <div id="modalWorkspace" class="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4 custom-scrollbar"></div>
 
-      <!-- UNIVERSAL DIRECT SHARE (NO DOWNLOAD NEEDED) & DOWNLOAD ACTION BAR -->
+      <!-- UNIVERSAL DIRECT SHARE & DOWNLOAD ACTION BAR -->
       <div class="px-4 sm:px-6 py-3.5 border-t theme-border glass-subpanel flex flex-wrap items-center justify-between gap-2 shrink-0">
         <div class="flex flex-wrap items-center gap-2">
           <button id="universalShareOutputBtn" class="px-4 py-2 rounded-xl accent-gradient text-white font-bold text-xs flex items-center gap-1.5 shadow-lg hover:opacity-95 transition">

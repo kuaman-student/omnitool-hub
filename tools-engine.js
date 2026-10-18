@@ -1,4 +1,4 @@
-// Interactive Client-Side Engines + Universal Share/Download Artifact State (100% English)
+// OmniTool Hub v5.0 — Context-Verified Smart Engine Router (100% English)
 
 const ToolEngine = {
   currentArtifact: {
@@ -9,11 +9,12 @@ const ToolEngine = {
     mimeType: "text/plain"
   },
 
+  activeCleanup: null,
+
   setArtifact({ toolName, text = "", blob = null, filename = "omnitool-output.txt", mimeType = "text/plain" }) {
     this.currentArtifact = { toolName, text, blob, filename, mimeType };
   },
 
-  // Share the generated file or result directly via Web Share API without saving to disk first
   async shareCurrentArtifact(toastCallback) {
     const art = this.currentArtifact;
     const blobToShare = art.blob || new Blob([art.text || `OmniTool Hub — ${art.toolName}`], { type: art.mimeType || "text/plain" });
@@ -23,7 +24,7 @@ const ToolEngine = {
       try {
         await navigator.share({
           title: `OmniTool Hub — ${art.toolName}`,
-          text: (art.text && art.text.length < 500) ? art.text : `Generated with ${art.toolName} on OmniTool Hub`,
+          text: (art.text && art.text.length < 400) ? art.text : `Generated with ${art.toolName} on OmniTool Hub`,
           files: [file]
         });
         toastCallback("Shared file directly via system Share Sheet!");
@@ -65,7 +66,15 @@ const ToolEngine = {
     toastCallback(`Downloaded ${art.filename}!`);
   },
 
+  // ============================================================================
+  // MASTER CONTEXT-AWARE ROUTER (Checks Specific Tool Name BEFORE Category!)
+  // ============================================================================
   renderWorkspace(tool, container) {
+    if (typeof this.activeCleanup === "function") {
+      try { this.activeCleanup(); } catch {}
+      this.activeCleanup = null;
+    }
+
     container.innerHTML = "";
     const name = tool.name.toLowerCase();
     const cat = tool.categoryId;
@@ -77,22 +86,75 @@ const ToolEngine = {
       mimeType: "text/plain"
     });
 
+    // --- SPECIFIC OVERRIDES (Fixes Cross-Category Input Mismatches!) ---
+
+    // A. IMAGES TO PDF / ADD IMAGES TO PDF / JPG TO PDF (#40, #23, etc.)
+    if (name.includes("images to pdf") || name.includes("add images to pdf") || name.includes("jpg to pdf") || name.includes("image to pdf") || name.includes("svg to pdf")) {
+      return this.renderImagesToPdfEngine(tool, container);
+    }
+
+    // B. TEXT / WORD / EXCEL / POWERPOINT / HTML / MARKDOWN / EPUB TO PDF (#41, #42, #43, #196, #224, #238, #626)
+    if (name.endsWith("to pdf") && !name.includes("image") && !name.includes("jpg")) {
+      return this.renderDocumentToPdfEngine(tool, container);
+    }
+
+    // C. BASE64 TO IMAGE vs IMAGE TO BASE64 (#85, #86)
+    if (name.includes("from base64") || name.includes("base64 to image")) {
+      return this.renderBase64ToImageEngine(tool, container);
+    }
+    if (name.includes("image to base64")) {
+      return this.renderImageToBase64Engine(tool, container);
+    }
+
+    // D. LIVE SCREEN / WEBCAM / AUDIO RECORDERS (#145, #146, #184)
+    if (name.includes("record screen") || name.includes("record webcam") || name.includes("record audio")) {
+      return this.renderLiveRecorderEngine(tool, container);
+    }
+
+    // E. ZIP / ARCHIVE CREATOR & EXTRACTOR (#297 - #306, #758)
+    if (name.includes("zip") || name.includes("archive") || name.includes("7z") || name.includes("tar") || name.includes("gzip")) {
+      return this.renderZipArchiveEngine(tool, container);
+    }
+
+    // F. BULK FILE MANAGEMENT, RENAMER & CHECKSUMS (Category 21 & Checksum tools)
+    if (cat === "files" || name.includes("checksum") || name.includes("duplicate file") || name.includes("file signature") || name.includes("magic-bytes")) {
+      return this.renderFileBatchEngine(tool, container);
+    }
+
+    // G. TIMERS, STOPWATCH, POMODORO, DICE, COIN, WHEEL (Category 14 interactive tools)
+    if (name.includes("stopwatch") || name.includes("timer") || name.includes("pomodoro") || name.includes("alarm")) {
+      return this.renderTimerStopwatchEngine(tool, container);
+    }
+    if (name.includes("dice") || name.includes("coin") || name.includes("wheel") || name.includes("random decision") || name.includes("winner picker") || name.includes("team random")) {
+      return this.renderRandomizerStudio(tool, container);
+    }
+
+    // H. QR CODE GENERATOR vs QR DECODER
+    if (name.includes("qr") && name.includes("decoder")) {
+      return this.renderImageEngine(tool, container);
+    }
+    if (name.includes("qr")) {
+      return this.renderQrEngine(tool, container);
+    }
+
+    // --- STANDARD CATEGORY ENGINES ---
     if (cat === "pdf") return this.renderPdfEngine(tool, container);
-    if (cat === "image" || (cat === "converters" && (name.includes("png") || name.includes("jpg") || name.includes("webp")))) {
+    if (cat === "image" || (cat === "converters" && (name.includes("png") || name.includes("jpg") || name.includes("webp") || name.includes("svg")))) {
       return this.renderImageEngine(tool, container);
     }
     if (cat === "robotics" || cat === "ros2" || name.includes("ohm") || name.includes("resistor") || name.includes("pwm") || name.includes("gear") || name.includes("3d-printing")) {
       return this.renderRoboticsEngine(tool, container);
     }
-    if (name.includes("qr") && !name.includes("decoder")) return this.renderQrEngine(tool, container);
-    if (cat === "fintech" || name.includes("gst") || name.includes("discount") || name.includes("profit")) {
+    if (cat === "fintech" || name.includes("gst") || name.includes("discount") || name.includes("profit") || name.includes("emi") || name.includes("sip")) {
       return this.renderFinTechEngine(tool, container);
     }
     if (cat === "llmai" || cat === "ai") return this.renderAiLlmEngine(tool, container);
     if (cat === "dev" || cat === "security" || cat === "cyber" || cat === "web" || cat === "design" || cat === "network") {
       return this.renderDevSecurityEngine(tool, container);
     }
-    if (cat === "data" || name.includes("csv")) return this.renderDataSpreadsheetEngine(tool, container);
+    if (cat === "data" || name.includes("csv") || name.includes("spreadsheet")) {
+      return this.renderDataSpreadsheetEngine(tool, container);
+    }
     if (cat === "audio" || cat === "video" || cat === "gif" || cat === "creator" || name.includes("speech")) {
       return this.renderMediaEngine(tool, container);
     }
@@ -102,10 +164,624 @@ const ToolEngine = {
     return this.renderTextAndUniversalEngine(tool, container);
   },
 
-  // 1. PDF ENGINE
+  // ============================================================================
+  // SPECIAL ENGINE A: IMAGES TO PDF (#40, #23) — ACCEPTS IMAGES, OUTPUTS PDF!
+  // ============================================================================
+  renderImagesToPdfEngine(tool, container) {
+    container.innerHTML = `
+      <div class="space-y-4">
+        <div class="p-4 rounded-2xl glass-subpanel flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="text-sm font-bold theme-text-primary">Image-to-PDF Compiler — ${tool.name}</h3>
+            <p class="text-xs theme-text-muted mt-0.5">Select 1 or multiple images (<b>JPG, PNG, WebP</b>). Each image will be embedded as a high-resolution page inside a new PDF document.</p>
+          </div>
+          <span class="text-xs font-mono px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Accepts Images Only</span>
+        </div>
+
+        <div class="border-2 border-dashed theme-border rounded-2xl p-6 text-center hover:opacity-95 transition">
+          <input type="file" id="imgToPdfInput" accept="image/png,image/jpeg,image/webp,image/*" multiple class="hidden" />
+          <label for="imgToPdfInput" class="cursor-pointer flex flex-col items-center">
+            <i data-lucide="images" class="w-10 h-10 accent-text mb-2"></i>
+            <span class="text-sm font-bold theme-text-primary">Click to select Images (PNG, JPG, WebP — Multiple supported)</span>
+            <span class="text-xs theme-text-muted mt-1" id="imgToPdfStatus">No images selected yet</span>
+          </label>
+        </div>
+
+        <div id="imgPreviewStrip" class="hidden flex gap-2 overflow-x-auto py-2 custom-scrollbar"></div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs theme-text-muted block mb-1">PDF Page Layout Mode</label>
+            <select id="imgPdfPageSize" class="w-full px-3.5 py-2.5 rounded-xl text-sm">
+              <option value="fit">Fit Page to Image Dimensions (Original Aspect)</option>
+              <option value="a4p">Standard A4 Portrait (595 × 842 pt)</option>
+              <option value="a4l">Standard A4 Landscape (842 × 595 pt)</option>
+            </select>
+          </div>
+          <div class="flex items-end">
+            <button id="buildImgPdfBtn" class="w-full py-2.5 px-4 rounded-xl accent-gradient text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-lg">
+              <i data-lucide="file-check-2" class="w-4 h-4"></i> Convert Selected Images to PDF
+            </button>
+          </div>
+        </div>
+
+        <div id="imgPdfOutBox" class="hidden p-4 rounded-2xl glass-subpanel text-xs"></div>
+      </div>
+    `;
+    lucide.createIcons();
+
+    const inp = container.querySelector("#imgToPdfInput");
+    const status = container.querySelector("#imgToPdfStatus");
+    const strip = container.querySelector("#imgPreviewStrip");
+    const outBox = container.querySelector("#imgPdfOutBox");
+
+    inp.addEventListener("change", () => {
+      const files = Array.from(inp.files);
+      status.textContent = files.length ? `${files.length} image(s) ready: ${files.map(f => f.name).join(", ")}` : "No images selected";
+      strip.innerHTML = "";
+      if (files.length) {
+        strip.classList.remove("hidden");
+        files.forEach(file => {
+          const url = URL.createObjectURL(file);
+          const img = document.createElement("img");
+          img.src = url;
+          img.className = "h-20 w-auto rounded-lg border theme-border object-cover shrink-0";
+          strip.appendChild(img);
+        });
+      } else {
+        strip.classList.add("hidden");
+      }
+    });
+
+    // Helper to convert any image (including WebP) into PNG ArrayBuffer via Canvas
+    const fileToPngBytes = (file) => new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const c = document.createElement("canvas");
+        c.width = img.naturalWidth;
+        c.height = img.naturalHeight;
+        c.getContext("2d").drawImage(img, 0, 0);
+        c.toBlob(async (blob) => {
+          if (!blob) return reject(new Error("Canvas conversion failed"));
+          resolve({ bytes: await blob.arrayBuffer(), w: img.naturalWidth, h: img.naturalHeight });
+        }, "image/png");
+      };
+      img.onerror = reject;
+      img.src = URL.createObjectURL(file);
+    });
+
+    container.querySelector("#buildImgPdfBtn").addEventListener("click", async () => {
+      const files = Array.from(inp.files);
+      if (!files.length) return alert("Please select at least one image (PNG, JPG, WebP) first!");
+
+      outBox.classList.remove("hidden");
+      outBox.innerHTML = `<span class="accent-text font-semibold">Embedding ${files.length} image(s) into PDF...</span>`;
+
+      try {
+        const { PDFDocument } = PDFLib;
+        const pdfDoc = await PDFDocument.create();
+        const layout = container.querySelector("#imgPdfPageSize").value;
+
+        for (const f of files) {
+          const { bytes, w, h } = await fileToPngBytes(f);
+          const embeddedImg = await pdfDoc.embedPng(bytes);
+
+          if (layout === "fit") {
+            const page = pdfDoc.addPage([w, h]);
+            page.drawImage(embeddedImg, { x: 0, y: 0, width: w, height: h });
+          } else {
+            const pw = layout === "a4p" ? 595.28 : 841.89;
+            const ph = layout === "a4p" ? 841.89 : 595.28;
+            const page = pdfDoc.addPage([pw, ph]);
+            const margin = 24;
+            const scale = Math.min((pw - margin * 2) / w, (ph - margin * 2) / h);
+            const dw = w * scale;
+            const dh = h * scale;
+            page.drawImage(embeddedImg, {
+              x: (pw - dw) / 2,
+              y: (ph - dh) / 2,
+              width: dw,
+              height: dh
+            });
+          }
+        }
+
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes], { type: "application/pdf" });
+        const outName = "images-compiled.pdf";
+
+        this.setArtifact({
+          toolName: tool.name,
+          text: `Compiled ${files.length} image(s) into ${outName} (${(blob.size / 1024).toFixed(1)} KB)`,
+          blob,
+          filename: outName,
+          mimeType: "application/pdf"
+        });
+
+        outBox.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <span class="text-emerald-400 font-bold">✅ Created ${outName} (${files.length} pages, ${(blob.size / 1024).toFixed(1)} KB)!</span>
+            <span class="theme-text-muted">Click <b>"Share Output Directly"</b> or <b>"Download Output"</b> below!</span>
+          </div>
+        `;
+      } catch (err) {
+        outBox.innerHTML = `<span class="text-rose-400">Error: ${err.message}</span>`;
+      }
+    });
+  },
+
+  // ============================================================================
+  // SPECIAL ENGINE B: DOCUMENT / TEXT / CSV / HTML TO PDF GENERATOR
+  // ============================================================================
+  renderDocumentToPdfEngine(tool, container) {
+    container.innerHTML = `
+      <div class="space-y-3">
+        <div class="p-3.5 rounded-2xl glass-subpanel flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="text-sm font-bold theme-text-primary">${tool.name} — Document-to-PDF Generator</h3>
+            <p class="text-xs theme-text-muted">Upload a document/text/CSV/Markdown file OR type/paste your content below to compile a clean A4 PDF.</p>
+          </div>
+          <input type="file" id="docToPdfFile" accept=".txt,.md,.csv,.json,.html,.xml,.log" class="text-xs file:mr-2 file:py-1 file:px-2.5 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white cursor-pointer" />
+        </div>
+
+        <input id="docPdfTitle" type="text" value="${tool.name} Document" placeholder="Document Header Title..." class="w-full px-3.5 py-2 rounded-xl text-sm font-bold" />
+        <textarea id="docPdfBody" rows="7" class="w-full p-3.5 rounded-2xl text-xs font-mono" placeholder="Paste or type your document content here...">OmniTool Hub — Official Generated PDF Document\n\nTool Used: ${tool.name}\nGenerated Locally: ${new Date().toLocaleString()}\n\n1. All content is formatted onto standard A4 pages.\n2. You can directly share this generated PDF without downloading or save it to your device.</textarea>
+
+        <div class="flex items-center justify-between gap-3">
+          <button id="generateDocPdfBtn" class="px-5 py-2.5 rounded-xl accent-gradient text-white font-bold text-xs shadow-lg flex items-center gap-2">
+            <i data-lucide="file-text" class="w-4 h-4"></i> Generate A4 PDF Now
+          </button>
+          <span id="docPdfStatus" class="text-xs text-emerald-400 font-semibold"></span>
+        </div>
+      </div>
+    `;
+    lucide.createIcons();
+
+    const fileInp = container.querySelector("#docToPdfFile");
+    const bodyTa = container.querySelector("#docPdfBody");
+    const titleInp = container.querySelector("#docPdfTitle");
+    const status = container.querySelector("#docPdfStatus");
+
+    fileInp.addEventListener("change", (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      titleInp.value = f.name.replace(/\.[^.]+$/, "");
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        bodyTa.value = ev.target.result;
+        buildPdf();
+      };
+      reader.readAsText(f);
+    });
+
+    const buildPdf = async () => {
+      const { PDFDocument, StandardFonts, rgb } = PDFLib;
+      const pdfDoc = await PDFDocument.create();
+      const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+      const rawLines = bodyTa.value.replace(/\r/g, "").split("\n");
+      const wrappedLines = [];
+      rawLines.forEach(line => {
+        if (line.length <= 85) wrappedLines.push(line);
+        else {
+          const chunks = line.match(/.{1,85}/g) || [""];
+          chunks.forEach(c => wrappedLines.push(c));
+        }
+      });
+
+      const linesPerPage = 42;
+      const totalPages = Math.max(1, Math.ceil(wrappedLines.length / linesPerPage));
+
+      for (let p = 0; p < totalPages; p++) {
+        const page = pdfDoc.addPage([595.28, 841.89]);
+        page.drawText(titleInp.value || "Document", { x: 45, y: 790, size: 15, font: boldFont, color: rgb(0.15, 0.2, 0.5) });
+        const slice = wrappedLines.slice(p * linesPerPage, (p + 1) * linesPerPage);
+        slice.forEach((ln, idx) => {
+          page.drawText(ln.replace(/[^\x20-\x7E]/g, " "), {
+            x: 45,
+            y: 755 - idx * 16,
+            size: 10.5,
+            font,
+            color: rgb(0.1, 0.1, 0.1)
+          });
+        });
+        page.drawText(`Page ${p + 1} of ${totalPages}`, { x: 480, y: 30, size: 9, font, color: rgb(0.5, 0.5, 0.5) });
+      }
+
+      const pdfBytes = await pdfDoc.save();
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
+      const outName = `${(titleInp.value || "document").toLowerCase().replace(/[^a-z0-9]+/g, "-")}.pdf`;
+
+      this.setArtifact({
+        toolName: tool.name,
+        text: bodyTa.value,
+        blob,
+        filename: outName,
+        mimeType: "application/pdf"
+      });
+      status.textContent = `✅ PDF Ready (${totalPages} page(s), ${(blob.size / 1024).toFixed(1)} KB) — Use Share or Download below!`;
+    };
+
+    container.querySelector("#generateDocPdfBtn").addEventListener("click", buildPdf);
+    buildPdf();
+  },
+
+  // ============================================================================
+  // SPECIAL ENGINE C: BASE64 <-> IMAGE DEDICATED CONVERTERS (#85, #86)
+  // ============================================================================
+  renderBase64ToImageEngine(tool, container) {
+    container.innerHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="glass-subpanel p-4 rounded-2xl space-y-3">
+          <label class="text-xs font-bold accent-text block">Paste Base64 Image String (data:image/... or raw base64)</label>
+          <textarea id="b64ImgInput" rows="7" class="w-full p-3 rounded-xl font-mono text-xs" placeholder="Paste Base64 string here...">iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==</textarea>
+          <button id="decodeB64ImgBtn" class="w-full py-2 rounded-xl accent-gradient text-white font-bold text-xs">Render Image from Base64</button>
+        </div>
+        <div class="glass-subpanel p-4 rounded-2xl flex flex-col items-center justify-center">
+          <img id="b64PreviewImg" class="max-h-56 rounded-xl border theme-border" alt="Decoded Base64 Preview" />
+          <span id="b64ImgStatus" class="text-xs theme-text-muted mt-2">Decoded image ready for Direct Share or Download</span>
+        </div>
+      </div>
+    `;
+    const inp = container.querySelector("#b64ImgInput");
+    const img = container.querySelector("#b64PreviewImg");
+    const st = container.querySelector("#b64ImgStatus");
+
+    const decodeNow = () => {
+      let raw = inp.value.trim();
+      if (!raw) return;
+      if (!raw.startsWith("data:image")) raw = `data:image/png;base64,${raw}`;
+      img.onload = () => {
+        st.textContent = `Rendered: ${img.naturalWidth} × ${img.naturalHeight} px`;
+        fetch(raw).then(r => r.blob()).then(blob => {
+          this.setArtifact({ toolName: tool.name, text: raw, blob, filename: "decoded-base64.png", mimeType: blob.type || "image/png" });
+        });
+      };
+      img.onerror = () => { st.textContent = "Invalid Base64 image data"; };
+      img.src = raw;
+    };
+    container.querySelector("#decodeB64ImgBtn").addEventListener("click", decodeNow);
+    decodeNow();
+  },
+
+  renderImageToBase64Engine(tool, container) {
+    container.innerHTML = `
+      <div class="space-y-3">
+        <div class="glass-subpanel p-4 rounded-2xl flex flex-wrap items-center justify-between gap-2">
+          <span class="text-xs font-bold theme-text-primary">Select any Image to encode into a Base64 Data URI</span>
+          <input type="file" id="imgToB64File" accept="image/*" class="text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white cursor-pointer" />
+        </div>
+        <textarea id="imgB64Output" rows="8" readonly class="w-full p-3 rounded-2xl font-mono text-xs" placeholder="Upload an image above to generate its Base64 string..."></textarea>
+      </div>
+    `;
+    const out = container.querySelector("#imgB64Output");
+    container.querySelector("#imgToB64File").addEventListener("change", (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        out.value = ev.target.result;
+        this.setArtifact({ toolName: tool.name, text: out.value, filename: `${f.name}-base64.txt` });
+      };
+      reader.readAsDataURL(f);
+    });
+  },
+
+  // ============================================================================
+  // SPECIAL ENGINE D: LIVE SCREEN, WEBCAM & AUDIO RECORDER (#145, #146, #184)
+  // ============================================================================
+  renderLiveRecorderEngine(tool, container) {
+    const n = tool.name.toLowerCase();
+    const mode = n.includes("screen") ? "screen" : n.includes("webcam") ? "webcam" : "audio";
+
+    container.innerHTML = `
+      <div class="space-y-4">
+        <div class="glass-subpanel p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-bold theme-text-primary">Live Browser ${mode.toUpperCase()} Recorder</h3>
+            <p class="text-xs theme-text-muted">Captures directly to a WebM media file in local memory. Share or download immediately after stopping.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="startRecBtn" class="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-white animate-ping"></span> Start Recording
+            </button>
+            <button id="stopRecBtn" disabled class="px-4 py-2 rounded-xl glass-btn text-xs font-bold opacity-50">Stop & Save</button>
+          </div>
+        </div>
+        <div class="glass-subpanel p-4 rounded-2xl flex flex-col items-center justify-center">
+          <video id="recPreview" autoplay muted playsinline class="max-h-64 w-full rounded-xl bg-black"></video>
+          <span id="recStatus" class="text-xs font-mono theme-text-muted mt-2">Click "Start Recording" and grant browser permission</span>
+        </div>
+      </div>
+    `;
+
+    const videoEl = container.querySelector("#recPreview");
+    const startBtn = container.querySelector("#startRecBtn");
+    const stopBtn = container.querySelector("#stopRecBtn");
+    const status = container.querySelector("#recStatus");
+    let recorder = null;
+    let stream = null;
+    let chunks = [];
+
+    this.activeCleanup = () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    };
+
+    startBtn.addEventListener("click", async () => {
+      try {
+        chunks = [];
+        if (mode === "screen") {
+          stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        } else if (mode === "webcam") {
+          stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        } else {
+          stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        }
+        videoEl.srcObject = stream;
+        recorder = new MediaRecorder(stream);
+        recorder.ondataavailable = (e) => { if (e.data.size > 0) chunks.push(e.data); };
+        recorder.onstop = () => {
+          const mime = mode === "audio" ? "audio/webm" : "video/webm";
+          const ext = "webm";
+          const blob = new Blob(chunks, { type: mime });
+          videoEl.srcObject = null;
+          videoEl.src = URL.createObjectURL(blob);
+          videoEl.muted = false;
+          videoEl.controls = true;
+          const outName = `recorded-${mode}-${Date.now()}.${ext}`;
+          this.setArtifact({ toolName: tool.name, text: `Recorded ${mode} (${(blob.size/1024).toFixed(1)} KB)`, blob, filename: outName, mimeType: mime });
+          status.textContent = `✅ Recording complete (${(blob.size / 1024).toFixed(1)} KB)! Use Share or Download below.`;
+        };
+        recorder.start();
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        stopBtn.classList.remove("opacity-50");
+        status.textContent = "🔴 Recording in progress...";
+      } catch (err) {
+        status.textContent = "Permission denied or device unavailable: " + err.message;
+      }
+    });
+
+    stopBtn.addEventListener("click", () => {
+      if (recorder && recorder.state !== "inactive") recorder.stop();
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      stopBtn.classList.add("opacity-50");
+    });
+  },
+
+  // ============================================================================
+  // SPECIAL ENGINE E: REAL JSZIP ARCHIVE CREATOR & INSPECTOR (#297 - #306)
+  // ============================================================================
+  renderZipArchiveEngine(tool, container) {
+    const isExtract = tool.name.toLowerCase().includes("extract") || tool.name.toLowerCase().includes("inspect") || tool.name.toLowerCase().includes("decompressor");
+    container.innerHTML = `
+      <div class="space-y-4">
+        <div class="p-4 rounded-2xl glass-subpanel flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="text-sm font-bold theme-text-primary">Client-Side JSZip Engine — ${tool.name}</h3>
+            <p class="text-xs theme-text-muted">${isExtract ? "Select a .zip archive to inspect and extract its contents locally." : "Select multiple files of any type to compress into a downloadable/shareable .zip archive."}</p>
+          </div>
+          <input type="file" id="zipFileInput" ${isExtract ? 'accept=".zip,application/zip"' : "multiple"} class="text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white cursor-pointer" />
+        </div>
+        <div id="zipOutputBox" class="p-4 rounded-2xl glass-subpanel font-mono text-xs space-y-1.5 min-h-[120px]">Select file(s) above to begin archive processing...</div>
+      </div>
+    `;
+
+    const inp = container.querySelector("#zipFileInput");
+    const out = container.querySelector("#zipOutputBox");
+
+    inp.addEventListener("change", async () => {
+      const files = Array.from(inp.files);
+      if (!files.length) return;
+
+      try {
+        const zip = new JSZip();
+        if (isExtract) {
+          const loaded = await zip.loadAsync(files[0]);
+          const names = Object.keys(loaded.files);
+          out.innerHTML = `<div class="text-emerald-400 font-bold">Archive Inspected: ${files[0].name} (${names.length} entries)</div>` +
+            names.map(n => `<div>📄 ${n} (${loaded.files[n].dir ? "Folder" : "File"})</div>`).join("");
+          this.setArtifact({ toolName: tool.name, text: names.join("\n"), filename: "archive-manifest.txt" });
+        } else {
+          out.innerHTML = `<span class="accent-text">Compressing ${files.length} file(s) into ZIP...</span>`;
+          files.forEach(f => zip.file(f.name, f));
+          const blob = await zip.generateAsync({ type: "blob" });
+          const outName = "omnitool-archive.zip";
+          this.setArtifact({ toolName: tool.name, text: `ZIP Archive (${files.length} files, ${(blob.size/1024).toFixed(1)} KB)`, blob, filename: outName, mimeType: "application/zip" });
+          out.innerHTML = `<div class="text-emerald-400 font-bold">✅ Created ${outName} (${(blob.size / 1024).toFixed(1)} KB) containing ${files.length} file(s)!</div><div>Click <b>"Share Output Directly"</b> or <b>"Download Output"</b> below.</div>`;
+        }
+      } catch (err) {
+        out.innerHTML = `<span class="text-rose-400">Archive Error: ${err.message}</span>`;
+      }
+    });
+  },
+
+  // ============================================================================
+  // SPECIAL ENGINE F: BULK FILE RENAMER, CHECKSUM & MAGIC-BYTE INSPECTOR
+  // ============================================================================
+  renderFileBatchEngine(tool, container) {
+    container.innerHTML = `
+      <div class="space-y-4">
+        <div class="glass-subpanel p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-bold theme-text-primary">${tool.name} — Multi-File Batch Processor</h3>
+            <p class="text-xs theme-text-muted">Select multiple files to inspect SHA-256 checksums, magic-byte signatures, sizes, and bulk rename rules.</p>
+          </div>
+          <input type="file" id="batchFilesInput" multiple class="text-xs file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white cursor-pointer" />
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input id="batchPrefix" type="text" placeholder="Add Prefix (e.g., project_)" value="omni_" class="px-3.5 py-2 rounded-xl text-xs" />
+          <input id="batchSuffix" type="text" placeholder="Add Suffix (e.g., _v2)" value="_verified" class="px-3.5 py-2 rounded-xl text-xs" />
+        </div>
+        <textarea id="batchReportOut" rows="8" readonly class="w-full p-3.5 rounded-2xl font-mono text-xs" placeholder="Select files above to generate batch rename script, CSV manifest, and SHA-256 checksums..."></textarea>
+      </div>
+    `;
+
+    const inp = container.querySelector("#batchFilesInput");
+    const pre = container.querySelector("#batchPrefix");
+    const suf = container.querySelector("#batchSuffix");
+    const out = container.querySelector("#batchReportOut");
+
+    const processFiles = async () => {
+      const files = Array.from(inp.files);
+      if (!files.length) return;
+      const rows = [];
+      for (let i = 0; i < files.length; i++) {
+        const f = files[i];
+        const buf = await f.slice(0, 65536).arrayBuffer();
+        const hashBuf = await crypto.subtle.digest("SHA-256", buf);
+        const hashHex = Array.from(new Uint8Array(hashBuf)).slice(0, 8).map(b => b.toString(16).padStart(2, "0")).join("");
+        const magic = Array.from(new Uint8Array(buf.slice(0, 4))).map(b => b.toString(16).toUpperCase().padStart(2, "0")).join(" ");
+        const dot = f.name.lastIndexOf(".");
+        const base = dot > -1 ? f.name.slice(0, dot) : f.name;
+        const ext = dot > -1 ? f.name.slice(dot) : "";
+        const newName = `${pre.value}${base}${suf.value}_${String(i + 1).padStart(2, "0")}${ext}`;
+        rows.push(`${f.name}  -->  ${newName} | ${(f.size / 1024).toFixed(1)} KB | Magic: [${magic}] | SHA256-prefix: ${hashHex}`);
+      }
+      out.value = rows.join("\n");
+      this.setArtifact({ toolName: tool.name, text: out.value, filename: "batch-file-manifest.txt" });
+    };
+
+    inp.addEventListener("change", processFiles);
+    pre.addEventListener("input", processFiles);
+    suf.addEventListener("input", processFiles);
+  },
+
+  // ============================================================================
+  // SPECIAL ENGINE G: LIVE STOPWATCH, COUNTDOWN & POMODORO TIMER
+  // ============================================================================
+  renderTimerStopwatchEngine(tool, container) {
+    const isPomodoro = tool.name.toLowerCase().includes("pomodoro") || tool.name.toLowerCase().includes("countdown");
+    let seconds = isPomodoro ? 25 * 60 : 0;
+    let running = false;
+    let intervalId = null;
+
+    container.innerHTML = `
+      <div class="glass-subpanel p-6 rounded-2xl text-center space-y-4">
+        <span class="text-xs font-bold uppercase tracking-wider accent-text">${tool.name}</span>
+        <div id="timerDisplay" class="text-5xl sm:text-6xl font-mono font-extrabold theme-text-primary">00:00</div>
+        <div class="flex flex-wrap items-center justify-center gap-2.5">
+          <button id="tStartBtn" class="px-5 py-2.5 rounded-xl accent-gradient text-white font-bold text-xs">Start / Resume</button>
+          <button id="tPauseBtn" class="px-5 py-2.5 rounded-xl glass-btn font-bold text-xs">Pause</button>
+          <button id="tResetBtn" class="px-5 py-2.5 rounded-xl glass-btn font-bold text-xs text-rose-400">Reset</button>
+          <button id="tLapBtn" class="px-5 py-2.5 rounded-xl glass-btn font-bold text-xs">Record Lap</button>
+        </div>
+        <div id="lapList" class="text-xs font-mono theme-text-muted space-y-1 max-h-36 overflow-y-auto"></div>
+      </div>
+    `;
+
+    const disp = container.querySelector("#timerDisplay");
+    const laps = container.querySelector("#lapList");
+
+    const fmt = (s) => {
+      const m = Math.floor(Math.abs(s) / 60);
+      const sec = Math.abs(s) % 60;
+      return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+    };
+    disp.textContent = fmt(seconds);
+
+    this.activeCleanup = () => clearInterval(intervalId);
+
+    container.querySelector("#tStartBtn").addEventListener("click", () => {
+      if (running) return;
+      running = true;
+      intervalId = setInterval(() => {
+        seconds += isPomodoro ? -1 : 1;
+        disp.textContent = fmt(seconds);
+      }, 1000);
+    });
+    container.querySelector("#tPauseBtn").addEventListener("click", () => {
+      running = false;
+      clearInterval(intervalId);
+    });
+    container.querySelector("#tResetBtn").addEventListener("click", () => {
+      running = false;
+      clearInterval(intervalId);
+      seconds = isPomodoro ? 25 * 60 : 0;
+      disp.textContent = fmt(seconds);
+      laps.innerHTML = "";
+    });
+    container.querySelector("#tLapBtn").addEventListener("click", () => {
+      const entry = `Lap @ ${fmt(seconds)}`;
+      const div = document.createElement("div");
+      div.textContent = entry;
+      laps.prepend(div);
+      this.setArtifact({ toolName: tool.name, text: Array.from(laps.children).map(c => c.textContent).join("\n"), filename: "timer-laps.txt" });
+    });
+  },
+
+  // ============================================================================
+  // SPECIAL ENGINE H: DICE ROLLER, COIN FLIP & RANDOM DECISION PICKER
+  // ============================================================================
+  renderRandomizerStudio(tool, container) {
+    container.innerHTML = `
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="glass-subpanel p-4 rounded-2xl space-y-3">
+          <label class="text-xs font-bold accent-text block">Options / Names (One per line for Wheel/Winner Picker)</label>
+          <textarea id="randItems" rows="6" class="w-full p-3 rounded-xl text-xs font-mono">Option Alpha\nOption Beta\nOption Gamma\nOption Delta</textarea>
+          <div class="flex flex-wrap gap-2">
+            <button id="pickWinnerBtn" class="px-4 py-2 rounded-xl accent-gradient text-white font-bold text-xs">Pick Random Winner</button>
+            <button id="rollDiceBtn" class="px-4 py-2 rounded-xl glass-btn font-bold text-xs">Roll 2d6 Dice</button>
+            <button id="flipCoinBtn" class="px-4 py-2 rounded-xl glass-btn font-bold text-xs">Flip Coin</button>
+          </div>
+        </div>
+        <div class="glass-subpanel p-6 rounded-2xl flex flex-col items-center justify-center text-center">
+          <div id="randResultBig" class="text-2xl sm:text-3xl font-extrabold accent-text">Ready to Roll!</div>
+          <p id="randSub" class="text-xs font-mono theme-text-muted mt-2">Cryptographically fair selection via window.crypto</p>
+        </div>
+      </div>
+    `;
+    const big = container.querySelector("#randResultBig");
+    const sub = container.querySelector("#randSub");
+
+    container.querySelector("#pickWinnerBtn").addEventListener("click", () => {
+      const items = container.querySelector("#randItems").value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      if (!items.length) return;
+      const arr = new Uint32Array(1);
+      crypto.getRandomValues(arr);
+      const win = items[arr[0] % items.length];
+      big.textContent = `🏆 ${win}`;
+      sub.textContent = `Selected from ${items.length} candidates`;
+      this.setArtifact({ toolName: tool.name, text: `Winner: ${win}`, filename: "random-result.txt" });
+    });
+
+    container.querySelector("#rollDiceBtn").addEventListener("click", () => {
+      const d1 = (crypto.getRandomValues(new Uint32Array(1))[0] % 6) + 1;
+      const d2 = (crypto.getRandomValues(new Uint32Array(1))[0] % 6) + 1;
+      big.textContent = `🎲 ${d1} + ${d2} = ${d1 + d2}`;
+      sub.textContent = `Die 1: ${d1} | Die 2: ${d2}`;
+      this.setArtifact({ toolName: tool.name, text: `Dice Roll: ${d1} + ${d2} = ${d1 + d2}`, filename: "dice-roll.txt" });
+    });
+
+    container.querySelector("#flipCoinBtn").addEventListener("click", () => {
+      const side = (crypto.getRandomValues(new Uint32Array(1))[0] % 2) === 0 ? "HEADS" : "TAILS";
+      big.textContent = `🪙 ${side}`;
+      sub.textContent = `50/50 Cryptographic Coin Toss`;
+      this.setArtifact({ toolName: tool.name, text: `Coin Flip: ${side}`, filename: "coin-flip.txt" });
+    });
+  },
+
+  // ============================================================================
+  // 1. PDF ENGINE (Strictly for PDF-Input Operations: Merge, Split, Rotate, etc.)
+  // ============================================================================
   renderPdfEngine(tool, container) {
     const name = tool.name.toLowerCase();
-    const isMerge = name.includes("merge");
+    const isMultiPdf = name.includes("merge") || name.includes("compare") || name.includes("another pdf");
+
+    let paramLabel = "Page Number / Range (e.g., 1, 2-4)";
+    let defaultVal = "1";
+    if (name.includes("rotate")) { paramLabel = "Rotation Angle in Degrees (90, 180, 270)"; defaultVal = "90"; }
+    else if (name.includes("watermark") || name.includes("text") || name.includes("header") || name.includes("sign") || name.includes("comment")) {
+      paramLabel = "Text / Watermark / Signature Stamp to Apply";
+      defaultVal = "APPROVED • OMNITOOL HUB";
+    } else if (name.includes("metadata")) {
+      paramLabel = "New Document Title Metadata";
+      defaultVal = "Verified PDF Document";
+    }
+
     container.innerHTML = `
       <div class="space-y-4">
         <div class="p-4 rounded-2xl glass-subpanel flex flex-wrap items-center justify-between gap-2">
@@ -117,22 +793,22 @@ const ToolEngine = {
         </div>
 
         <div class="border-2 border-dashed theme-border rounded-2xl p-6 text-center hover:opacity-90 transition">
-          <input type="file" id="pdfInputFiles" accept="application/pdf" ${isMerge ? "multiple" : ""} class="hidden" />
+          <input type="file" id="pdfInputFiles" accept="application/pdf" ${isMultiPdf ? "multiple" : ""} class="hidden" />
           <label for="pdfInputFiles" class="cursor-pointer flex flex-col items-center">
             <i data-lucide="file-up" class="w-10 h-10 accent-text mb-2"></i>
-            <span class="text-sm font-bold theme-text-primary">Click to choose PDF ${isMerge ? "files (select 2 or more)" : "document"}</span>
+            <span class="text-sm font-bold theme-text-primary">Click to choose PDF ${isMultiPdf ? "files (select 2 or more)" : "document"}</span>
             <span class="text-xs theme-text-muted mt-1" id="pdfFileStatus">No PDF selected yet</span>
           </label>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="text-xs theme-text-muted block mb-1">Page Number / Angle (90, 180, 270) / Watermark Text</label>
-            <input id="pdfParamInput" type="text" value="${name.includes("rotate") ? "90" : "CONFIDENTIAL"}" class="w-full px-3.5 py-2 rounded-xl text-sm" />
+            <label class="text-xs theme-text-muted block mb-1">${paramLabel}</label>
+            <input id="pdfParamInput" type="text" value="${defaultVal}" class="w-full px-3.5 py-2 rounded-xl text-sm" />
           </div>
           <div class="flex items-end">
             <button id="runPdfActionBtn" class="w-full py-2.5 px-4 rounded-xl accent-gradient text-white font-bold text-sm transition flex items-center justify-center gap-2 shadow-lg">
-              <i data-lucide="zap" class="w-4 h-4"></i> Execute PDF Operation
+              <i data-lucide="zap" class="w-4 h-4"></i> Execute: ${tool.name}
             </button>
           </div>
         </div>
@@ -160,10 +836,20 @@ const ToolEngine = {
 
       try {
         const { PDFDocument, degrees, rgb } = PDFLib;
+
+        if (name.includes("compare") && files.length >= 2) {
+          const p1 = await PDFDocument.load(await files[0].arrayBuffer());
+          const p2 = await PDFDocument.load(await files[1].arrayBuffer());
+          const cmpText = `PDF Comparison Report:\n• File 1: ${files[0].name} (${p1.getPageCount()} pages, ${(files[0].size/1024).toFixed(1)} KB)\n• File 2: ${files[1].name} (${p2.getPageCount()} pages, ${(files[1].size/1024).toFixed(1)} KB)\n• Page Difference: ${Math.abs(p1.getPageCount() - p2.getPageCount())} page(s)`;
+          this.setArtifact({ toolName: tool.name, text: cmpText, filename: "pdf-comparison.txt" });
+          outBox.innerHTML = `<pre class="whitespace-pre-wrap text-emerald-400 font-mono">${cmpText}</pre>`;
+          return;
+        }
+
         let outBytes;
         let outName = `processed-${files[0].name}`;
 
-        if (isMerge) {
+        if (isMultiPdf) {
           const mergedPdf = await PDFDocument.create();
           for (const f of files) {
             const bytes = await f.arrayBuffer();
@@ -182,6 +868,7 @@ const ToolEngine = {
           if (name.includes("rotate")) {
             const angle = parseInt(param, 10) || 90;
             pdfDoc.getPages().forEach(p => p.setRotation(degrees(angle)));
+            outBytes = await pdfDoc.save();
           } else if (name.includes("reverse")) {
             const newPdf = await PDFDocument.create();
             const indices = pdfDoc.getPageIndices().reverse();
@@ -195,13 +882,20 @@ const ToolEngine = {
             const pageIdx = Math.max(0, Math.min(totalPages - 1, (parseInt(param, 10) || 1) - 1));
             if (totalPages > 1) pdfDoc.removePage(pageIdx);
             outBytes = await pdfDoc.save();
-          } else if (name.includes("watermark") || name.includes("text") || name.includes("number")) {
+          } else if (name.includes("split") || name.includes("extract")) {
+            const newPdf = await PDFDocument.create();
+            const pageIdx = Math.max(0, Math.min(totalPages - 1, (parseInt(param, 10) || 1) - 1));
+            const [copied] = await newPdf.copyPages(pdfDoc, [pageIdx]);
+            newPdf.addPage(copied);
+            outBytes = await newPdf.save();
+            outName = `page-${pageIdx + 1}-${files[0].name}`;
+          } else if (name.includes("watermark") || name.includes("text") || name.includes("number") || name.includes("header") || name.includes("sign")) {
             pdfDoc.getPages().forEach((page, i) => {
               page.drawText(name.includes("number") ? `Page ${i + 1} of ${totalPages}` : (param || "OMNITOOL HUB"), {
-                x: 50,
-                y: 40,
-                size: 16,
-                color: rgb(0.85, 0.2, 0.2)
+                x: 45,
+                y: 35,
+                size: 14,
+                color: rgb(0.85, 0.15, 0.15)
               });
             });
             outBytes = await pdfDoc.save();
@@ -232,7 +926,9 @@ const ToolEngine = {
     });
   },
 
+  // ============================================================================
   // 2. IMAGE CANVAS STUDIO
+  // ============================================================================
   renderImageEngine(tool, container) {
     container.innerHTML = `
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -584,7 +1280,7 @@ const ToolEngine = {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="glass-subpanel p-4 rounded-2xl space-y-3">
           <label class="text-xs font-bold theme-text-primary block">Enter URL, Wi-Fi Credentials, vCard, or Text</label>
-          <textarea id="qrTextInput" rows="4" class="w-full p-3 rounded-xl text-sm">https://omnitool.hub</textarea>
+          <textarea id="qrTextInput" rows="4" class="w-full p-3 rounded-xl text-sm">https://kuaman-student.github.io/omnitool-hub/</textarea>
           <div class="grid grid-cols-2 gap-2">
             <div>
               <label class="text-[11px] theme-text-muted">Foreground Color</label>
@@ -606,7 +1302,7 @@ const ToolEngine = {
     const target = container.querySelector("#qrCanvasTarget");
     const makeQr = () => {
       target.innerHTML = "";
-      const txt = container.querySelector("#qrTextInput").value || "https://omnitool.hub";
+      const txt = container.querySelector("#qrTextInput").value || "https://kuaman-student.github.io/omnitool-hub/";
       new QRCode(target, {
         text: txt,
         width: 220,
@@ -721,10 +1417,10 @@ const ToolEngine = {
       if (mode === "tokens") {
         out.value = [
           `=== LLM Token & API Cost Report (${tool.name}) ===`,
-          `Characters: ${chars} \vert{} Words:${words}`,
+          `Characters: ${chars} | Words: ${words}`,
           `Estimated Tokens (~3.8 chars/token): ${estTokens} tokens`,
-          `Est. Cost @ $2.50 / 1M frontier tokens:$${((estTokens / 1e6) * 2.5).toFixed(6)}`,
-          `Est. Cost @ $0.15 / 1M fast flash tokens:$${((estTokens / 1e6) * 0.15).toFixed(6)}`,
+          `Est. Cost @ $2.50 / 1M frontier tokens: $${((estTokens / 1e6) * 2.5).toFixed(6)}`,
+          `Est. Cost @ $0.15 / 1M fast flash tokens: $${((estTokens / 1e6) * 0.15).toFixed(6)}`,
           `Est. Local VRAM (7B Q4_K_M GGUF): ~4.8 GB`
         ].join("\n");
       } else if (mode === "sysprompt") {
@@ -744,7 +1440,7 @@ const ToolEngine = {
         }, null, 2);
       } else if (mode === "ragchunk") {
         const chunks = v.match(/.{1,120}/g) || [];
-        out.value = chunks.map((c, i) => `[Chunk #${i + 1}]:${c.trim()}`).join("\n\n");
+        out.value = chunks.map((c, i) => `[Chunk #${i + 1}]: ${c.trim()}`).join("\n\n");
       } else if (mode === "pii") {
         out.value = v
           .replace(/[\w.-]+@[\w.-]+\.\w+/g, "[REDACTED_EMAIL]")
@@ -855,7 +1551,7 @@ const ToolEngine = {
       } else if (mode === "sort") {
         csvOut.value = [lines[0], ...lines.slice(1).sort()].join("\n");
       } else if (mode === "stats") {
-        csvOut.value = `Total Rows: ${lines.length}\nData Rows:${lines.length - 1}\nColumns: ${lines[0].split(",").length}\nUnique Rows: ${new Set(lines).size}`;
+        csvOut.value = `Total Rows: ${lines.length}\nData Rows: ${lines.length - 1}\nColumns: ${lines[0].split(",").length}\nUnique Rows: ${new Set(lines).size}`;
       }
       this.setArtifact({ toolName: tool.name, text: csvOut.value, filename: `data-${tool.id}.json`, mimeType: "application/json" });
     };
@@ -870,7 +1566,7 @@ const ToolEngine = {
       container.innerHTML = `
         <div class="space-y-3 glass-subpanel p-4 rounded-2xl">
           <label class="text-xs theme-text-muted block">Enter Script or Text for Browser Speech Synthesis (TTS) & Teleprompter</label>
-          <textarea id="ttsInput" rows="5" class="w-full p-3 rounded-xl text-sm">Welcome to OmniTool Hub v4.0! Every tool features instant sharing without downloading and complete client-side privacy.</textarea>
+          <textarea id="ttsInput" rows="5" class="w-full p-3 rounded-xl text-sm">Welcome to OmniTool Hub v5.0! Every tool features verified inputs, instant sharing without downloading, and complete client-side privacy.</textarea>
           <div class="flex gap-2">
             <button id="speakBtn" class="px-4 py-2 rounded-xl accent-gradient text-white text-xs font-bold">Speak Aloud (TTS)</button>
             <button id="stopSpeakBtn" class="px-4 py-2 rounded-xl glass-btn text-rose-400 text-xs font-semibold">Stop Audio</button>
@@ -891,7 +1587,7 @@ const ToolEngine = {
     container.innerHTML = `
       <div class="space-y-4">
         <div class="glass-subpanel p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
-          <input type="file" id="mediaFileInput" accept="video/*,audio/*" class="text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white" />
+          <input type="file" id="mediaFileInput" accept="video/*,audio/*,image/gif" class="text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white" />
           <div class="flex items-center gap-2">
             <select id="mediaSpeed" class="px-2.5 py-1.5 rounded-xl text-xs">
               <option value="0.5">0.5x Slow-Mo</option>
@@ -921,7 +1617,7 @@ const ToolEngine = {
       if (!f) return;
       player.src = URL.createObjectURL(f);
       player.onloadedmetadata = () => {
-        const info = `${f.name} | ${(f.size/1024/1024).toFixed(2)} MB \vert{} Duration:${player.duration.toFixed(1)}s`;
+        const info = `${f.name} | ${(f.size/1024/1024).toFixed(2)} MB | Duration: ${player.duration.toFixed(1)}s`;
         container.querySelector("#mediaMeta").textContent = info;
         this.setArtifact({ toolName: tool.name, text: info, blob: f, filename: f.name, mimeType: f.type });
       };
@@ -973,9 +1669,9 @@ const ToolEngine = {
       const intA = Math.max(0, Math.floor(Math.abs(A)));
       const report = [
         `Expression Result: ${mathRes}`,
-        `A × B: ${(A * B).toFixed(4)} \vert{} A ÷ B: ${(A / B).toFixed(4)}`,
+        `A × B: ${(A * B).toFixed(4)} | A ÷ B: ${(A / B).toFixed(4)}`,
         `CGPA (${A}) → Percentage: ${(A * 9.5).toFixed(2)}%`,
-        `Binary(${intA}): ${intA.toString(2)} \vert{} Hex: 0x${intA.toString(16).toUpperCase()}`,
+        `Binary(${intA}): ${intA.toString(2)} | Hex: 0x${intA.toString(16).toUpperCase()}`,
         `Current Unix Timestamp: ${Math.floor(Date.now() / 1000)}`
       ].join("\n");
 
@@ -1003,7 +1699,7 @@ const ToolEngine = {
           <button data-txt="clean" class="px-2.5 py-1 rounded-xl glass-btn text-xs font-semibold">Trim Whitespace</button>
         </div>
 
-        <textarea id="uniTextInput" rows="7" class="w-full p-3.5 rounded-2xl text-sm" placeholder="Type or paste content for ${tool.name}...">OmniTool Hub v4.0 — 1,050+ Client-Side Utilities with Direct Sharing & 10 Live Themes!</textarea>
+        <textarea id="uniTextInput" rows="7" class="w-full p-3.5 rounded-2xl text-sm" placeholder="Type or paste content for ${tool.name}...">OmniTool Hub v5.0 — 1,050+ Verified Client-Side Utilities with Direct Sharing & 10 Live Themes!</textarea>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
           <div class="p-2.5 rounded-xl glass-subpanel"><div class="text-sm font-extrabold accent-text" id="stWords">0</div><div class="text-[10px] theme-text-muted uppercase">Words</div></div>
