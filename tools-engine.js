@@ -71,7 +71,7 @@ const ToolEngine = {
   // ============================================================================
   renderWorkspace(tool, container) {
     if (typeof this.activeCleanup === "function") {
-      try { this.activeCleanup(); } catch {}
+      this.activeCleanup();
       this.activeCleanup = null;
     }
 
@@ -94,7 +94,8 @@ const ToolEngine = {
     }
 
     // B. TEXT / WORD / EXCEL / POWERPOINT / HTML / MARKDOWN / EPUB TO PDF (#41, #42, #43, #196, #224, #238, #626)
-    if (name.endsWith("to pdf") && !name.includes("image") && !name.includes("jpg")) {
+    if (name.endsWith("to pdf") && !name.includes("image") && !name.includes("jpg") &&
+        !/(word|excel|powerpoint|docx|xlsx|pptx)/.test(name)) {
       return this.renderDocumentToPdfEngine(tool, container);
     }
 
@@ -131,7 +132,7 @@ const ToolEngine = {
 
     // H. QR CODE GENERATOR vs QR DECODER
     if (name.includes("qr") && name.includes("decoder")) {
-      return this.renderImageEngine(tool, container);
+      return this.renderQrDecoderEngine(tool, container);
     }
     if (name.includes("qr")) {
       return this.renderQrEngine(tool, container);
@@ -161,6 +162,16 @@ const ToolEngine = {
     if (cat === "calculators" || cat === "science" || cat === "productivity" || cat === "education") {
       return this.renderCalculatorProductivityEngine(tool, container);
     }
+    if (cat === "docs") {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">This document operation is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">Office files will not be read as plain text or exported as a misleading PDF.</p>
+        </div>
+      `;
+      return;
+    }
     return this.renderTextAndUniversalEngine(tool, container);
   },
 
@@ -179,10 +190,10 @@ const ToolEngine = {
         </div>
 
         <div class="border-2 border-dashed theme-border rounded-2xl p-6 text-center hover:opacity-95 transition">
-          <input type="file" id="imgToPdfInput" accept=".png,.jpg,.jpeg,.webp,image/png,image/jpeg,image/webp" multiple class="hidden" />
+          <input type="file" id="imgToPdfInput" accept=".png,.jpg,.jpeg,.webp,.svg,image/png,image/jpeg,image/webp,image/svg+xml" multiple class="hidden" />
           <label for="imgToPdfInput" class="cursor-pointer flex flex-col items-center">
             <i data-lucide="images" class="w-10 h-10 accent-text mb-2"></i>
-            <span class="text-sm font-bold theme-text-primary">Click to select Images (PNG, JPG, WebP — Multiple supported)</span>
+            <span class="text-sm font-bold theme-text-primary">Click to select Images (PNG, JPG, WebP, SVG — Multiple supported)</span>
             <span class="text-[11px] theme-text-muted mt-1">Image files only — PDF documents are not accepted.</span>
             <span class="text-xs theme-text-muted mt-1" id="imgToPdfStatus">No images selected yet</span>
           </label>
@@ -231,16 +242,16 @@ const ToolEngine = {
     inp.addEventListener("change", () => {
       const files = Array.from(inp.files);
       clearPreviews();
-      const supportedMimeTypes = ["image/png", "image/jpeg", "image/webp"];
+      const supportedMimeTypes = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
       const isSupportedImage = (file) => {
-        const extensionMatches = /\.(png|jpe?g|webp)$/i.test(file.name);
+        const extensionMatches = /\.(png|jpe?g|webp|svg)$/i.test(file.name);
         return supportedMimeTypes.includes(file.type) || (!file.type && extensionMatches);
       };
       const unsupportedFiles = files.filter(file => !isSupportedImage(file));
       if (unsupportedFiles.length) {
         selectedImages = [];
         convertBtn.disabled = true;
-        status.textContent = `Unsupported file(s): ${unsupportedFiles.map(file => file.name).join(", ")}. Select PNG, JPG, or WebP images only.`;
+        status.textContent = `Unsupported file(s): ${unsupportedFiles.map(file => file.name).join(", ")}. Select PNG, JPG, WebP, or SVG images only.`;
         return;
       }
 
@@ -340,7 +351,8 @@ const ToolEngine = {
           </div>
         `;
       } catch (err) {
-        outBox.innerHTML = `<span class="text-rose-400">Error: ${err.message}</span>`;
+        outBox.classList.add("text-rose-400");
+        outBox.textContent = `Error: ${err.message}`;
       }
     });
   },
@@ -591,7 +603,21 @@ const ToolEngine = {
   // SPECIAL ENGINE E: REAL JSZIP ARCHIVE CREATOR & INSPECTOR (#297 - #306)
   // ============================================================================
   renderZipArchiveEngine(tool, container) {
-    const isExtract = tool.name.toLowerCase().includes("extract") || tool.name.toLowerCase().includes("inspect") || tool.name.toLowerCase().includes("decompressor");
+    const name = tool.name.toLowerCase();
+    const isSupportedZip = name.includes("zip") && !name.includes("7z") && !name.includes("tar") &&
+      !name.includes("gzip") && !name.includes("batch");
+    if (!isSupportedZip) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">This archive format or batch operation is not supported yet.</p>
+          <p class="text-xs theme-text-muted">This workspace supports creating and extracting standard ZIP archives only.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const isExtract = name.includes("extract") || name.includes("inspect") || name.includes("decompressor");
     container.innerHTML = `
       <div class="space-y-4">
         <div class="p-4 rounded-2xl glass-subpanel flex flex-wrap items-center justify-between gap-2">
@@ -616,10 +642,45 @@ const ToolEngine = {
         const zip = new JSZip();
         if (isExtract) {
           const loaded = await zip.loadAsync(files[0]);
-          const names = Object.keys(loaded.files);
-          out.innerHTML = `<div class="text-emerald-400 font-bold">Archive Inspected: ${files[0].name} (${names.length} entries)</div>` +
-            names.map(n => `<div>📄 ${n} (${loaded.files[n].dir ? "Folder" : "File"})</div>`).join("");
-          this.setArtifact({ toolName: tool.name, text: names.join("\n"), filename: "archive-manifest.txt" });
+          const entries = Object.values(loaded.files);
+          out.replaceChildren();
+          const heading = document.createElement("div");
+          heading.className = "text-emerald-400 font-bold";
+          heading.textContent = `Archive inspected: ${files[0].name} (${entries.length} entries)`;
+          out.appendChild(heading);
+          const manifest = [];
+          for (const entry of entries) {
+            manifest.push(`${entry.dir ? "Folder" : "File"}: ${entry.name}`);
+            const row = document.createElement("div");
+            row.className = "flex items-center justify-between gap-3";
+            const label = document.createElement("span");
+            label.textContent = `${entry.dir ? "Folder" : "File"}: ${entry.name}`;
+            row.appendChild(label);
+            if (!entry.dir) {
+              const downloadBtn = document.createElement("button");
+              downloadBtn.type = "button";
+              downloadBtn.className = "px-2 py-1 rounded-lg glass-btn shrink-0";
+              downloadBtn.textContent = "Extract file";
+              downloadBtn.addEventListener("click", async () => {
+                try {
+                  const blob = await entry.async("blob");
+                  const fileName = entry.name.split("/").filter(Boolean).pop() || "extracted-file";
+                  this.setArtifact({ toolName: tool.name, text: `Extracted ${entry.name}`, blob, filename: fileName, mimeType: blob.type || "application/octet-stream" });
+                  const url = URL.createObjectURL(blob);
+                  const link = document.createElement("a");
+                  link.href = url;
+                  link.download = fileName;
+                  link.click();
+                  setTimeout(() => URL.revokeObjectURL(url), 5000);
+                } catch (error) {
+                  row.lastChild.textContent = `Extraction failed: ${error.message}`;
+                }
+              });
+              row.appendChild(downloadBtn);
+            }
+            out.appendChild(row);
+          }
+          this.setArtifact({ toolName: tool.name, text: manifest.join("\n"), filename: "archive-manifest.txt", mimeType: "text/plain" });
         } else {
           out.innerHTML = `<span class="accent-text">Compressing ${files.length} file(s) into ZIP...</span>`;
           files.forEach(f => zip.file(f.name, f));
@@ -629,7 +690,8 @@ const ToolEngine = {
           out.innerHTML = `<div class="text-emerald-400 font-bold">✅ Created ${outName} (${(blob.size / 1024).toFixed(1)} KB) containing ${files.length} file(s)!</div><div>Click <b>"Share Output Directly"</b> or <b>"Download Output"</b> below.</div>`;
         }
       } catch (err) {
-        out.innerHTML = `<span class="text-rose-400">Archive Error: ${err.message}</span>`;
+        out.classList.add("text-rose-400");
+        out.textContent = `Archive Error: ${err.message}`;
       }
     });
   },
@@ -804,17 +866,49 @@ const ToolEngine = {
   // ============================================================================
   renderPdfEngine(tool, container) {
     const name = tool.name.toLowerCase();
-    const isMultiPdf = name.includes("merge") || name.includes("compare") || name.includes("another pdf");
+    const isCompare = name.includes("compare");
+    const isMerge = name.includes("merge");
+    const isInsertPages = name.includes("insert pages from another pdf");
+    const isMultiPdf = isMerge || isCompare || isInsertPages;
+    const supportsPageNumbers = name.includes("page numbers");
+    const supportsTextStamp = name.includes("watermark") && !name.includes("remove") ||
+      name.includes("add text to pdf") || name.includes("sign pdf") ||
+      name.includes("headers and footers");
+    const supportsMetadata = name.includes("metadata");
+    const supportsPageOperation = name.includes("rotate") || name.includes("reverse") ||
+      name.includes("blank") || name.includes("delete") || name.includes("split") ||
+      name.includes("extract selected pages") || name.includes("reorder") ||
+      name.includes("duplicate");
+    const isSupported = isCompare || isMerge || isInsertPages || supportsPageNumbers ||
+      supportsTextStamp || supportsMetadata || supportsPageOperation;
+
+    if (!isSupported) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">This PDF operation is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">No file will be changed or downloaded. This workspace will be enabled when it can perform this exact operation safely.</p>
+        </div>
+      `;
+      return;
+    }
 
     let paramLabel = "Page Number / Range (e.g., 1, 2-4)";
     let defaultVal = "1";
     if (name.includes("rotate")) { paramLabel = "Rotation Angle in Degrees (90, 180, 270)"; defaultVal = "90"; }
-    else if (name.includes("watermark") || name.includes("text") || name.includes("header") || name.includes("sign") || name.includes("comment")) {
+    else if (supportsTextStamp) {
       paramLabel = "Text / Watermark / Signature Stamp to Apply";
       defaultVal = "APPROVED • OMNITOOL HUB";
-    } else if (name.includes("metadata")) {
+    } else if (supportsMetadata) {
       paramLabel = "New Document Title Metadata";
       defaultVal = "Verified PDF Document";
+    } else if (isInsertPages) {
+      paramLabel = "Insert the second PDF after this page number";
+    } else if (name.includes("reorder")) {
+      paramLabel = "New page order (comma-separated; e.g., 3,1,2)";
+      defaultVal = "";
+    } else if (isCompare) {
+      paramLabel = "Comparison includes page count and file size";
     }
 
     container.innerHTML = `
@@ -862,9 +956,39 @@ const ToolEngine = {
       statusEl.textContent = files.length ? `${files.length} file(s): ${files.map(f => f.name).join(", ")}` : "No PDF selected";
     });
 
+    const parsePageIndexes = (selection, pageCount) => {
+      const indexes = [];
+      const seen = new Set();
+      const parts = selection.split(",").map(part => part.trim()).filter(Boolean);
+      if (!parts.length) throw new Error("Enter at least one page number.");
+
+      for (const part of parts) {
+        const match = part.match(/^(\d+)(?:-(\d+))?$/);
+        if (!match) throw new Error(`Invalid page range: "${part}". Use values like 1, 2-4.`);
+        const start = Number(match[1]);
+        const end = Number(match[2] || match[1]);
+        if (start < 1 || end < start || end > pageCount) {
+          throw new Error(`Page range "${part}" is outside this document (1-${pageCount}).`);
+        }
+        for (let page = start; page <= end; page++) {
+          const index = page - 1;
+          if (!seen.has(index)) {
+            indexes.push(index);
+            seen.add(index);
+          }
+        }
+      }
+      return indexes;
+    };
+
     container.querySelector("#runPdfActionBtn").addEventListener("click", async () => {
       const files = Array.from(fileInput.files);
       if (!files.length) return alert("Please select at least one PDF file first.");
+      if (isMultiPdf && files.length < 2) {
+        outBox.classList.remove("hidden");
+        outBox.textContent = `Select at least two PDF files to ${isCompare ? "compare" : isMerge ? "merge" : "insert pages"}.`;
+        return;
+      }
 
       outBox.classList.remove("hidden");
       outBox.innerHTML = `<span class="accent-text font-semibold">Processing PDF in browser memory...</span>`;
@@ -872,19 +996,20 @@ const ToolEngine = {
       try {
         const { PDFDocument, degrees, rgb } = PDFLib;
 
-        if (name.includes("compare") && files.length >= 2) {
+        if (isCompare) {
           const p1 = await PDFDocument.load(await files[0].arrayBuffer());
           const p2 = await PDFDocument.load(await files[1].arrayBuffer());
           const cmpText = `PDF Comparison Report:\n• File 1: ${files[0].name} (${p1.getPageCount()} pages, ${(files[0].size/1024).toFixed(1)} KB)\n• File 2: ${files[1].name} (${p2.getPageCount()} pages, ${(files[1].size/1024).toFixed(1)} KB)\n• Page Difference: ${Math.abs(p1.getPageCount() - p2.getPageCount())} page(s)`;
-          this.setArtifact({ toolName: tool.name, text: cmpText, filename: "pdf-comparison.txt" });
-          outBox.innerHTML = `<pre class="whitespace-pre-wrap text-emerald-400 font-mono">${cmpText}</pre>`;
+          this.setArtifact({ toolName: tool.name, text: cmpText, filename: "pdf-comparison.txt", mimeType: "text/plain" });
+          outBox.classList.add("whitespace-pre-wrap", "text-emerald-400", "font-mono");
+          outBox.textContent = cmpText;
           return;
         }
 
         let outBytes;
         let outName = `processed-${files[0].name}`;
 
-        if (isMultiPdf) {
+        if (isMerge) {
           const mergedPdf = await PDFDocument.create();
           for (const f of files) {
             const bytes = await f.arrayBuffer();
@@ -894,6 +1019,17 @@ const ToolEngine = {
           }
           outBytes = await mergedPdf.save();
           outName = "merged-omnitool.pdf";
+        } else if (isInsertPages) {
+          const destinationPdf = await PDFDocument.load(await files[0].arrayBuffer());
+          const sourcePdf = await PDFDocument.load(await files[1].arrayBuffer());
+          const targetPage = Number(container.querySelector("#pdfParamInput").value);
+          if (!Number.isInteger(targetPage) || targetPage < 1 || targetPage > destinationPdf.getPageCount()) {
+            throw new Error(`Choose an insertion page from 1 to ${destinationPdf.getPageCount()}.`);
+          }
+          const sourcePages = await destinationPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
+          sourcePages.forEach((page, index) => destinationPdf.insertPage(targetPage + index, page));
+          outBytes = await destinationPdf.save();
+          outName = `pages-inserted-${files[0].name}`;
         } else {
           const bytes = await files[0].arrayBuffer();
           const pdfDoc = await PDFDocument.load(bytes);
@@ -901,8 +1037,11 @@ const ToolEngine = {
           const param = container.querySelector("#pdfParamInput").value.trim();
 
           if (name.includes("rotate")) {
-            const angle = parseInt(param, 10) || 90;
-            pdfDoc.getPages().forEach(p => p.setRotation(degrees(angle)));
+            const angle = Number(param);
+            if (!Number.isInteger(angle) || angle % 90 !== 0) {
+              throw new Error("Enter a rotation angle that is a multiple of 90 degrees.");
+            }
+            pdfDoc.getPages().forEach(page => page.setRotation(degrees(((angle % 360) + 360) % 360)));
             outBytes = await pdfDoc.save();
           } else if (name.includes("reverse")) {
             const newPdf = await PDFDocument.create();
@@ -911,30 +1050,55 @@ const ToolEngine = {
             copied.forEach(p => newPdf.addPage(p));
             outBytes = await newPdf.save();
           } else if (name.includes("blank")) {
-            pdfDoc.addPage();
+            const pages = pdfDoc.getPages();
+            const size = pages.length ? pages[pages.length - 1].getSize() : { width: 595.28, height: 841.89 };
+            pdfDoc.addPage([size.width, size.height]);
             outBytes = await pdfDoc.save();
           } else if (name.includes("delete")) {
-            const pageIdx = Math.max(0, Math.min(totalPages - 1, (parseInt(param, 10) || 1) - 1));
-            if (totalPages > 1) pdfDoc.removePage(pageIdx);
+            const pageIndexes = parsePageIndexes(param, totalPages).sort((a, b) => b - a);
+            if (pageIndexes.length >= totalPages) throw new Error("At least one page must remain in the PDF.");
+            pageIndexes.forEach(pageIndex => pdfDoc.removePage(pageIndex));
             outBytes = await pdfDoc.save();
           } else if (name.includes("split") || name.includes("extract")) {
             const newPdf = await PDFDocument.create();
-            const pageIdx = Math.max(0, Math.min(totalPages - 1, (parseInt(param, 10) || 1) - 1));
-            const [copied] = await newPdf.copyPages(pdfDoc, [pageIdx]);
-            newPdf.addPage(copied);
+            const pageIndexes = parsePageIndexes(param, totalPages);
+            const copied = await newPdf.copyPages(pdfDoc, pageIndexes);
+            copied.forEach(page => newPdf.addPage(page));
             outBytes = await newPdf.save();
-            outName = `page-${pageIdx + 1}-${files[0].name}`;
-          } else if (name.includes("watermark") || name.includes("text") || name.includes("number") || name.includes("header") || name.includes("sign")) {
+            outName = `pages-${param.replace(/[^0-9,-]/g, "")}-${files[0].name}`;
+          } else if (name.includes("duplicate")) {
+            const pageIndexes = parsePageIndexes(param, totalPages);
+            const newPdf = await PDFDocument.create();
+            const copyIndexes = pdfDoc.getPageIndices().flatMap(index =>
+              pageIndexes.includes(index) ? [index, index] : [index]
+            );
+            const copied = await newPdf.copyPages(pdfDoc, copyIndexes);
+            copied.forEach(page => newPdf.addPage(page));
+            outBytes = await newPdf.save();
+            outName = `duplicated-pages-${files[0].name}`;
+          } else if (name.includes("reorder")) {
+            const pageIndexes = parsePageIndexes(param, totalPages);
+            if (pageIndexes.length !== totalPages || new Set(pageIndexes).size !== totalPages) {
+              throw new Error(`Enter every page exactly once to reorder this ${totalPages}-page document.`);
+            }
+            const newPdf = await PDFDocument.create();
+            const copied = await newPdf.copyPages(pdfDoc, pageIndexes);
+            copied.forEach(page => newPdf.addPage(page));
+            outBytes = await newPdf.save();
+            outName = `reordered-${files[0].name}`;
+          } else if (supportsPageNumbers || supportsTextStamp) {
             pdfDoc.getPages().forEach((page, i) => {
-              page.drawText(name.includes("number") ? `Page ${i + 1} of ${totalPages}` : (param || "OMNITOOL HUB"), {
-                x: 45,
-                y: 35,
-                size: 14,
-                color: rgb(0.85, 0.15, 0.15)
-              });
+              const { height } = page.getSize();
+              const text = supportsPageNumbers ? `Page ${i + 1} of ${totalPages}` : (param || "OMNITOOL HUB");
+              if (supportsPageNumbers || name.includes("footer")) {
+                page.drawText(text, { x: 45, y: 35, size: 14, color: rgb(0.85, 0.15, 0.15) });
+              }
+              if (supportsTextStamp && name.includes("header")) {
+                page.drawText(text, { x: 45, y: height - 40, size: 14, color: rgb(0.85, 0.15, 0.15) });
+              }
             });
             outBytes = await pdfDoc.save();
-          } else {
+          } else if (supportsMetadata) {
             pdfDoc.setTitle(param || "Processed by OmniTool Hub");
             outBytes = await pdfDoc.save();
           }
@@ -956,7 +1120,8 @@ const ToolEngine = {
           </div>
         `;
       } catch (err) {
-        outBox.innerHTML = `<span class="text-rose-400">Error: ${err.message}</span>`;
+        outBox.classList.add("text-rose-400");
+        outBox.textContent = `Error: ${err.message}`;
       }
     });
   },
@@ -965,6 +1130,38 @@ const ToolEngine = {
   // 2. IMAGE CANVAS STUDIO
   // ============================================================================
   renderImageEngine(tool, container) {
+    const name = tool.name.toLowerCase();
+    const supportedOperations = [
+      /^resize image$/,
+      /^compress image$/,
+      /^rotate image$/,
+      /^flip image horizontally$/,
+      /^flip image vertically$/,
+      /^convert jpg to png$/,
+      /^convert png to jpg$/,
+      /^convert image to webp$/,
+      /^convert svg to png$/,
+      /^remove exif metadata$/,
+      /^adjust brightness$/,
+      /^adjust contrast$/,
+      /^adjust saturation$/,
+      /^convert to grayscale$/,
+      /^invert image colo?urs$/,
+      /^apply image filters$/,
+      /^add text to image$/,
+      /^add text to image$/
+    ];
+    if (!supportedOperations.some(pattern => pattern.test(name))) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">This image operation is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">The image editor currently supports resizing, compression/export, rotation, flipping, selected filters, text watermarks, and the listed raster format conversions.</p>
+        </div>
+      `;
+      return;
+    }
+
     container.innerHTML = `
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div class="space-y-3 glass-subpanel p-4 rounded-2xl">
@@ -1029,9 +1226,11 @@ const ToolEngine = {
     const canvas = container.querySelector("#studioCanvas");
     const ctx = canvas.getContext("2d");
     let imgObj = new Image();
+    let hasLoadedImage = false;
     let rot = 0, flipH = 1, flipV = 1, gray = false, inv = false;
 
     const syncCanvasArtifact = () => {
+      if (!hasLoadedImage) return;
       const fmt = container.querySelector("#imgFormat").value;
       const ext = fmt.split("/")[1];
       canvas.toBlob((blob) => {
@@ -1063,11 +1262,19 @@ const ToolEngine = {
     syncCanvasArtifact();
 
     const redraw = () => {
-      if (!imgObj.src) return;
-      const w = parseInt(container.querySelector("#imgWidth").value, 10) || imgObj.naturalWidth;
-      const h = parseInt(container.querySelector("#imgHeight").value, 10) || imgObj.naturalHeight;
-      canvas.width = w;
-      canvas.height = h;
+      if (!hasLoadedImage) return;
+      const requestedWidth = Number.parseInt(container.querySelector("#imgWidth").value, 10);
+      const requestedHeight = Number.parseInt(container.querySelector("#imgHeight").value, 10);
+      const w = requestedWidth > 0 ? requestedWidth : imgObj.naturalWidth;
+      const h = requestedHeight > 0 ? requestedHeight : imgObj.naturalHeight;
+      if (w > 10000 || h > 10000 || w * h > 40000000) {
+        container.querySelector("#imgMetaInfo").textContent = "Choose dimensions up to 10,000 px per side and 40 megapixels total.";
+        return;
+      }
+      const outputWidth = rot % 180 === 0 ? w : h;
+      const outputHeight = rot % 180 === 0 ? h : w;
+      canvas.width = outputWidth;
+      canvas.height = outputHeight;
 
       const br = container.querySelector("#imgBright").value;
       const co = container.querySelector("#imgContrast").value;
@@ -1080,7 +1287,7 @@ const ToolEngine = {
 
       ctx.save();
       ctx.filter = `brightness(${br}%) contrast(${co}%) saturate(${sa}%) blur(${bl}px) ${gray ? "grayscale(100%)" : ""} ${inv ? "invert(100%)" : ""}`;
-      ctx.translate(w / 2, h / 2);
+      ctx.translate(outputWidth / 2, outputHeight / 2);
       ctx.rotate((rot * Math.PI) / 180);
       ctx.scale(flipH, flipV);
       ctx.drawImage(imgObj, -w / 2, -h / 2, w, h);
@@ -1091,10 +1298,10 @@ const ToolEngine = {
         ctx.fillStyle = "rgba(255,255,255,0.9)";
         ctx.font = `bold ${Math.max(18, Math.round(w / 20))}px sans-serif`;
         ctx.textAlign = "right";
-        ctx.fillText(wm, w - 20, h - 20);
+        ctx.fillText(wm, outputWidth - 20, outputHeight - 20);
       }
 
-      container.querySelector("#imgMetaInfo").textContent = `Canvas: ${w} × ${h} px | Ready to Share or Download`;
+      container.querySelector("#imgMetaInfo").textContent = `Canvas: ${outputWidth} × ${outputHeight} px | Ready to Share or Download`;
       syncCanvasArtifact();
     };
 
@@ -1104,11 +1311,18 @@ const ToolEngine = {
       const reader = new FileReader();
       reader.onload = (ev) => {
         imgObj.onload = () => {
+          hasLoadedImage = true;
           container.querySelector("#imgWidth").value = imgObj.naturalWidth;
           container.querySelector("#imgHeight").value = imgObj.naturalHeight;
           redraw();
         };
+        imgObj.onerror = () => {
+          container.querySelector("#imgMetaInfo").textContent = "Could not load this image. Choose a supported image file and try again.";
+        };
         imgObj.src = ev.target.result;
+      };
+      reader.onerror = () => {
+        container.querySelector("#imgMetaInfo").textContent = "Could not read this image file.";
       };
       reader.readAsDataURL(file);
     });
@@ -1133,8 +1347,21 @@ const ToolEngine = {
   // 3. ROBOTICS, ROS2, DRONES & ELECTRONICS ENGINE
   renderRoboticsEngine(tool, container) {
     const n = tool.name.toLowerCase();
+    const supportsPidVisualization = n.includes("pid parameter visualiser") || n.includes("pid parameter visualizer");
+    const supportsPwmVisualization = n.includes("pwm signal visualiser") || n.includes("pwm signal visualizer");
 
-    if (n.includes("pid") || n.includes("pwm") || n.includes("kalman") || n.includes("filter")) {
+    if (!supportsPidVisualization && !supportsPwmVisualization) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">This robotics/engineering operation is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">The PID and PWM visualizers are separate tools; this workspace will not substitute unrelated engineering calculations.</p>
+        </div>
+      `;
+      return;
+    }
+
+    if (supportsPidVisualization || supportsPwmVisualization) {
       container.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div class="glass-subpanel p-4 rounded-2xl space-y-3">
@@ -1183,7 +1410,7 @@ const ToolEngine = {
         ctx.stroke();
 
         let summaryText = "";
-        if (n.includes("pwm")) {
+        if (supportsPwmVisualization) {
           const duty = P / 100;
           const cycles = Math.max(2, Math.round(I / 10));
           const periodPx = c.width / cycles;
@@ -1247,66 +1474,6 @@ const ToolEngine = {
       return;
     }
 
-    container.innerHTML = `
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="glass-subpanel p-4 rounded-2xl space-y-3">
-          <h3 class="text-xs font-bold uppercase tracking-wider accent-text">${tool.name} — Parameters</h3>
-          <div class="grid grid-cols-2 gap-2.5">
-            <div>
-              <label class="text-[11px] theme-text-muted">Param A (Roll° / Voltage V / RPM / Thrust g)</label>
-              <input id="robA" type="number" value="30" step="any" class="w-full px-3 py-1.5 rounded-lg text-sm" />
-            </div>
-            <div>
-              <label class="text-[11px] theme-text-muted">Param B (Pitch° / Current A / Wheel Ø cm / Weight g)</label>
-              <input id="robB" type="number" value="15" step="any" class="w-full px-3 py-1.5 rounded-lg text-sm" />
-            </div>
-            <div>
-              <label class="text-[11px] theme-text-muted">Param C (Yaw° / Resistance Ω / Track Width cm)</label>
-              <input id="robC" type="number" value="45" step="any" class="w-full px-3 py-1.5 rounded-lg text-sm" />
-            </div>
-            <div>
-              <label class="text-[11px] theme-text-muted">Param D (Battery mAh / Filament Cost $/kg)</label>
-              <input id="robD" type="number" value="2200" step="any" class="w-full px-3 py-1.5 rounded-lg text-sm" />
-            </div>
-          </div>
-        </div>
-        <div id="robOutput" class="glass-subpanel p-4 rounded-2xl text-xs font-mono space-y-2 overflow-y-auto max-h-80"></div>
-      </div>
-    `;
-
-    const compute = () => {
-      const A = parseFloat(container.querySelector("#robA").value) || 0;
-      const B = parseFloat(container.querySelector("#robB").value) || 1;
-      const C = parseFloat(container.querySelector("#robC").value) || 1;
-      const D = parseFloat(container.querySelector("#robD").value) || 1;
-
-      const r = (A * Math.PI) / 180, p = (B * Math.PI) / 180, y = (C * Math.PI) / 180;
-      const cy = Math.cos(y * 0.5), sy = Math.sin(y * 0.5);
-      const cp = Math.cos(p * 0.5), sp = Math.sin(p * 0.5);
-      const cr = Math.cos(r * 0.5), sr = Math.sin(r * 0.5);
-      const qw = cr * cp * cy + sr * sp * sy;
-      const qx = sr * cp * cy - cr * sp * sy;
-      const qy = cr * sp * cy + sr * cp * sy;
-      const qz = cr * cp * sy - sr * sp * cy;
-
-      const wheelCircM = (Math.PI * B) / 100;
-      const linSpeed = (A / 60) * wheelCircM;
-
-      const report = [
-        `=== ${tool.name} Engineering Telemetry ===`,
-        `1. ROS2 Quaternion (from Roll=${A}°, Pitch=${B}°, Yaw=${C}°):`,
-        `   [x: ${qx.toFixed(4)}, y: ${qy.toFixed(4)}, z: ${qz.toFixed(4)}, w: ${qw.toFixed(4)}]`,
-        `2. Diff-Drive Linear Velocity (@ ${A} RPM, ${B}cm Wheel): ${linSpeed.toFixed(3)} m/s (${(linSpeed*3.6).toFixed(2)} km/h)`,
-        `3. Drone Thrust-to-Weight Ratio (A/B): ${(A / B).toFixed(2)} : 1 | Est. Flight Time (${D}mAh @ ${B}A): ${(((D/1000)*0.8)/B*60).toFixed(1)} mins`,
-        `4. Ohm's Law & Power: V = ${(B * C).toFixed(2)} V | I = ${(A / C).toFixed(3)} A | Power = ${(A * B).toFixed(2)} W`,
-        `5. ROS2 Static TF2 CLI: ros2 run tf2_ros static_transform_publisher 0 0 0 ${qx.toFixed(3)} ${qy.toFixed(3)} ${qz.toFixed(3)} ${qw.toFixed(3)} base_link sensor_frame`
-      ].join("\n");
-
-      container.querySelector("#robOutput").innerHTML = `<pre class="whitespace-pre-wrap">${report}</pre>`;
-      this.setArtifact({ toolName: tool.name, text: report, filename: `robotics-${tool.id}.txt` });
-    };
-    ["#robA", "#robB", "#robC", "#robD"].forEach(s => container.querySelector(s).addEventListener("input", compute));
-    compute();
   },
 
   // 4. QR CODE GENERATOR ENGINE
@@ -1364,60 +1531,242 @@ const ToolEngine = {
     makeQr();
   },
 
+  renderQrDecoderEngine(tool, container) {
+    if (tool.name.toLowerCase().includes("webcam")) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">Webcam QR scanning is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">Use the image-based QR decoder instead; this tool will not request camera access or claim a scan succeeded.</p>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div class="space-y-3 glass-subpanel p-4 rounded-2xl">
+        <label for="qrDecodeFile" class="text-xs font-bold theme-text-primary block">Choose an image containing a QR code</label>
+        <input id="qrDecodeFile" type="file" accept="image/*" class="text-xs" />
+        <button id="decodeQrBtn" type="button" class="px-4 py-2 rounded-xl accent-gradient text-white text-xs font-bold">Decode QR image</button>
+        <p id="qrDecodeStatus" class="text-xs theme-text-muted" role="status" aria-live="polite"></p>
+        <pre id="qrDecodeOutput" class="text-xs font-mono whitespace-pre-wrap break-all"></pre>
+      </div>
+    `;
+
+    const input = container.querySelector("#qrDecodeFile");
+    const status = container.querySelector("#qrDecodeStatus");
+    const output = container.querySelector("#qrDecodeOutput");
+    container.querySelector("#decodeQrBtn").addEventListener("click", async () => {
+      const file = input.files[0];
+      if (!file) {
+        status.textContent = "Choose an image file first.";
+        return;
+      }
+      if (typeof window.BarcodeDetector !== "function" && typeof window.jsQR !== "function") {
+        status.textContent = "QR decoding is unavailable because this browser has neither Barcode Detection support nor the jsQR decoder loaded.";
+        return;
+      }
+
+      const imageUrl = URL.createObjectURL(file);
+      try {
+        const image = await new Promise((resolve, reject) => {
+          const element = new Image();
+          element.onload = () => resolve(element);
+          element.onerror = () => reject(new Error("Could not read the selected image."));
+          element.src = imageUrl;
+        });
+        const canvas = document.createElement("canvas");
+        canvas.width = image.naturalWidth;
+        canvas.height = image.naturalHeight;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Canvas is unavailable for QR decoding.");
+        context.drawImage(image, 0, 0);
+
+        let decoded;
+        if (typeof window.BarcodeDetector === "function") {
+          const detector = new window.BarcodeDetector({ formats: ["qr_code"] });
+          const results = await detector.detect(canvas);
+          decoded = results.map(result => result.rawValue).filter(Boolean);
+        } else {
+          const pixels = context.getImageData(0, 0, canvas.width, canvas.height);
+          const result = window.jsQR(pixels.data, pixels.width, pixels.height);
+          decoded = result ? [result.data] : [];
+        }
+        if (!decoded.length) {
+          output.textContent = "";
+          status.textContent = "No QR code was found in this image.";
+          return;
+        }
+
+        output.textContent = decoded.join("\n");
+        status.textContent = `Decoded ${decoded.length} QR code(s).`;
+        this.setArtifact({
+          toolName: tool.name,
+          text: output.textContent,
+          filename: `decoded-qr-${tool.id}.txt`,
+          mimeType: "text/plain"
+        });
+      } catch (error) {
+        status.textContent = `QR decoding failed: ${error.message}`;
+      } finally {
+        URL.revokeObjectURL(imageUrl);
+      }
+    });
+  },
+
   // 5. FINTECH, GST, STARTUP & BUSINESS ENGINE
   renderFinTechEngine(tool, container) {
+    const name = tool.name.toLowerCase();
+    const kind = name.includes("gst") || name.includes("cgst") || name.includes("tax breakup") ? "gst"
+      : name.includes("emi") ? "emi"
+      : name.includes("sip") ? "sip"
+      : name.includes("runway") || name.includes("burn-rate") ? "runway"
+      : name.includes("discount") && !name.includes("discounted cash flow") && !name.includes("annual vs monthly") ? "discount"
+      : name.includes("net profit margin") ? null
+      : name.includes("gross margin") || name.includes("markup") ? "margin"
+      : name.includes("return on investment") || name.includes("(roi)") ? "roi"
+      : name.includes("customer acquisition cost") || name.includes("(cac)") ? "cac"
+      : name.includes("lifetime value") || name.includes("(ltv)") ? "ltv"
+      : (name.includes("mrr") || name.includes("arr")) && !name.includes("growth") ? "recurring"
+      : name.includes("break-even") ? "breakeven"
+      : name.includes("compound annual growth rate") || name.includes("(cagr)") ? "cagr"
+      : name.includes("return on ad spend") || name.includes("(roas)") ? "roas"
+      : name.includes("cpm") || name.includes("cpc") || name.includes("ctr") ? "ads"
+      : name.includes("bill splitter") || name.includes("group tip") ? "bill"
+      : null;
+
+    if (!kind) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">This specific financial calculation is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">No unrelated financial figures will be shown as the result.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const definitions = {
+      gst: ["Taxable amount", "GST rate (%)", "Duration (not used)", "Monthly amount (not used)"],
+      emi: ["Loan principal", "Annual interest rate (%)", "Loan term (years)", "Extra (not used)"],
+      sip: ["Monthly investment", "Expected annual return (%)", "Investment term (years)", "Extra (not used)"],
+      runway: ["Available cash reserve", "Monthly cash burn", "Extra (not used)", "Extra (not used)"],
+      discount: ["Original price", "Discount (%)", "Extra (not used)", "Extra (not used)"],
+      margin: ["Cost / purchase price", "Selling price", "Extra (not used)", "Extra (not used)"],
+      roi: ["Initial investment", "Current value / proceeds", "Extra (not used)", "Extra (not used)"],
+      cac: ["Sales and marketing spend", "New customers acquired", "Extra (not used)", "Extra (not used)"],
+      ltv: ["Monthly revenue per customer", "Gross margin (%)", "Customer lifetime (months)", "Extra (not used)"],
+      recurring: ["Number of customers", "Monthly revenue per customer", "Extra (not used)", "Extra (not used)"],
+      breakeven: ["Fixed costs", "Price per unit", "Variable cost per unit", "Extra (not used)"],
+      cagr: ["Starting value", "Ending value", "Number of years", "Extra (not used)"],
+      roas: ["Revenue attributed to ads", "Advertising spend", "Extra (not used)", "Extra (not used)"],
+      ads: ["Advertising spend", "Impressions", "Clicks", "Extra (not used)"],
+      bill: ["Bill amount", "Number of people", "Tip (%)", "Extra (not used)"]
+    };
+    const labels = definitions[kind];
+
     container.innerHTML = `
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="glass-subpanel p-4 rounded-2xl space-y-3">
           <h3 class="text-xs font-bold uppercase tracking-wider accent-text">${tool.name}</h3>
           <div class="grid grid-cols-2 gap-2.5">
-            <div>
-              <label class="text-[11px] theme-text-muted">Principal / Cash Reserve</label>
-              <input id="finA" type="number" value="50000" class="w-full px-3 py-1.5 rounded-lg text-sm" />
-            </div>
-            <div>
-              <label class="text-[11px] theme-text-muted">Rate % (GST / ROI / Interest %)</label>
-              <input id="finB" type="number" value="18" step="any" class="w-full px-3 py-1.5 rounded-lg text-sm" />
-            </div>
-            <div>
-              <label class="text-[11px] theme-text-muted">Duration (Years)</label>
-              <input id="finC" type="number" value="5" step="any" class="w-full px-3 py-1.5 rounded-lg text-sm" />
-            </div>
-            <div>
-              <label class="text-[11px] theme-text-muted">Monthly SIP / Burn Rate</label>
-              <input id="finD" type="number" value="8000" step="any" class="w-full px-3 py-1.5 rounded-lg text-sm" />
-            </div>
+            ${labels.map((label, index) => `
+              <div class="${label.includes("not used") ? "hidden" : ""}">
+                <label class="text-[11px] theme-text-muted">${label}</label>
+                <input id="fin${String.fromCharCode(65 + index)}" type="number" step="any"
+                  value="${kind === "gst" ? [50000, 18][index] || 0
+                    : kind === "emi" ? [500000, 8.5, 20][index] || 0
+                    : kind === "sip" ? [8000, 12, 10][index] || 0
+                    : kind === "runway" ? [500000, 80000][index] || 0
+                    : kind === "discount" ? [1000, 10][index] || 0
+                    : kind === "margin" ? [600, 1000][index] || 0
+                    : kind === "roi" || kind === "roas" ? [10000, 15000][index] || 0
+                    : kind === "cac" ? [10000, 20][index] || 0
+                    : kind === "ltv" ? [1000, 60, 24][index] || 0
+                    : kind === "recurring" ? [100, 50, 5][index] || 0
+                    : kind === "breakeven" ? [100000, 500, 300][index] || 0
+                    : kind === "cagr" ? [10000, 20000, 5][index] || 0
+                    : kind === "ads" ? [10000, 500000, 2000][index] || 0
+                    : [1000, 4, 10][index] || 0}" class="w-full px-3 py-1.5 rounded-lg text-sm" />
+              </div>
+            `).join("")}
           </div>
         </div>
-        <div id="finOut" class="glass-subpanel p-4 rounded-2xl font-mono text-xs space-y-2"></div>
+        <div id="finOut" class="glass-subpanel p-4 rounded-2xl font-mono text-xs space-y-2 whitespace-pre-wrap" role="status" aria-live="polite"></div>
       </div>
     `;
     const calcFin = () => {
-      const P = parseFloat(container.querySelector("#finA").value) || 0;
-      const R = parseFloat(container.querySelector("#finB").value) || 0;
-      const T = parseFloat(container.querySelector("#finC").value) || 1;
-      const Burn = parseFloat(container.querySelector("#finD").value) || 1;
+      const values = ["A", "B", "C", "D"].map(letter =>
+        Number(container.querySelector(`#fin${letter}`)?.value || 0)
+      );
+      const [a, b, c] = values;
+      const out = container.querySelector("#finOut");
+      if (values.some(value => !Number.isFinite(value) || value < 0)) {
+        out.textContent = "Enter valid non-negative numbers.";
+        return;
+      }
 
-      const gstExclusive = (P * R) / 100;
-      const gstInclusiveBase = P / (1 + R / 100);
-      const gstInclusiveTax = P - gstInclusiveBase;
+      let text;
+      if (kind === "gst") {
+        if (b >= 100) { out.textContent = "GST rate must be below 100%."; return; }
+        const tax = a * b / 100;
+        const inclusiveBase = a / (1 + b / 100);
+        text = `GST-exclusive total: ${(a + tax).toFixed(2)}\nTax amount: ${tax.toFixed(2)}\nCGST + SGST (intra-state): ${(tax / 2).toFixed(2)} each\nIGST (inter-state): ${tax.toFixed(2)}\nGST-inclusive base (if entered amount includes tax): ${inclusiveBase.toFixed(2)}\nEmbedded tax: ${(a - inclusiveBase).toFixed(2)}`;
+      } else if (kind === "emi") {
+        if (c <= 0) { out.textContent = "Loan term must be greater than zero."; return; }
+        const rate = b / 1200;
+        const months = c * 12;
+        const emi = rate === 0 ? a / months : a * rate * (1 + rate) ** months / ((1 + rate) ** months - 1);
+        text = `Monthly EMI: ${emi.toFixed(2)}\nTotal repayment: ${(emi * months).toFixed(2)}\nTotal interest: ${(emi * months - a).toFixed(2)}`;
+      } else if (kind === "sip") {
+        if (c <= 0) { out.textContent = "Investment term must be greater than zero."; return; }
+        const rate = b / 1200;
+        const months = c * 12;
+        const value = rate === 0 ? a * months : a * ((1 + rate) ** months - 1) / rate;
+        text = `Invested amount: ${(a * months).toFixed(2)}\nEstimated maturity value: ${value.toFixed(2)}\nEstimated gains: ${(value - a * months).toFixed(2)}\nAssumes end-of-month contributions and a constant return.`;
+      } else if (kind === "runway") {
+        if (b <= 0) { out.textContent = "Monthly cash burn must be greater than zero."; return; }
+        text = `Estimated runway: ${(a / b).toFixed(2)} months`;
+      } else if (kind === "discount") {
+        if (b > 100) { out.textContent = "Discount cannot exceed 100%."; return; }
+        text = `Discount amount: ${(a * b / 100).toFixed(2)}\nPrice after discount: ${(a * (1 - b / 100)).toFixed(2)}`;
+      } else if (kind === "margin") {
+        if (a <= 0 || b <= 0) { out.textContent = "Cost and selling price must be greater than zero."; return; }
+        const profit = b - a;
+        text = `Gross profit: ${profit.toFixed(2)}\nGross margin: ${(profit / b * 100).toFixed(2)}%\nMarkup on cost: ${(profit / a * 100).toFixed(2)}%`;
+      } else if (kind === "roi") {
+        if (a <= 0) { out.textContent = "Initial investment must be greater than zero."; return; }
+        text = `Profit / loss: ${(b - a).toFixed(2)}\nROI: ${((b - a) / a * 100).toFixed(2)}%`;
+      } else if (kind === "cac") {
+        if (b <= 0) { out.textContent = "Customer count must be greater than zero."; return; }
+        text = `Customer acquisition cost: ${(a / b).toFixed(2)} per customer`;
+      } else if (kind === "ltv") {
+        if (c <= 0 || b > 100) { out.textContent = "Lifetime must be positive and gross margin cannot exceed 100%."; return; }
+        const ltv = a * b / 100 * c;
+        text = `Estimated customer lifetime value: ${ltv.toFixed(2)}\nLTV:CAC is not shown because acquisition cost was not provided.`;
+      } else if (kind === "recurring") {
+        text = `Monthly recurring revenue (MRR): ${(a * b).toFixed(2)}\nAnnual recurring revenue (ARR): ${(a * b * 12).toFixed(2)}\nCustomer count: ${a}\nMonthly revenue per customer: ${b.toFixed(2)}`;
+      } else if (kind === "breakeven") {
+        if (b <= c) { out.textContent = "Price per unit must exceed variable cost per unit."; return; }
+        const units = a / (b - c);
+        text = `Break-even volume: ${Math.ceil(units)} units\nBreak-even revenue: ${(Math.ceil(units) * b).toFixed(2)}`;
+      } else if (kind === "cagr") {
+        if (a <= 0 || c <= 0) { out.textContent = "Starting value and duration must be greater than zero."; return; }
+        text = `Compound annual growth rate: ${(((b / a) ** (1 / c) - 1) * 100).toFixed(2)}%`;
+      } else if (kind === "roas") {
+        if (b <= 0) { out.textContent = "Advertising spend must be greater than zero."; return; }
+        text = `ROAS: ${(a / b).toFixed(2)}x\nRevenue per 1 unit of ad spend`;
+      } else if (kind === "ads") {
+        if (b <= 0) { out.textContent = "Impressions must be greater than zero."; return; }
+        text = `CPM: ${(a / b * 1000).toFixed(2)}\nCTR: ${(c / b * 100).toFixed(2)}%\nCPC: ${c > 0 ? (a / c).toFixed(2) : "undefined (no clicks)"}`;
+      } else {
+        if (b <= 0 || c < 0) { out.textContent = "Enter a positive number of people and a non-negative tip."; return; }
+        const total = a * (1 + c / 100);
+        text = `Tip amount: ${(a * c / 100).toFixed(2)}\nTotal bill: ${total.toFixed(2)}\nPer person: ${(total / b).toFixed(2)}`;
+      }
 
-      const rMonth = R / 12 / 100;
-      const nMonths = T * 12;
-      const emi = rMonth > 0 ? (P * rMonth * Math.pow(1 + rMonth, nMonths)) / (Math.pow(1 + rMonth, nMonths) - 1) : P / nMonths;
-      const sipFV = rMonth > 0 ? Burn * ((Math.pow(1 + rMonth, nMonths) - 1) / rMonth) * (1 + rMonth) : Burn * nMonths;
-
-      const text = [
-        `=== ${tool.name} Financial Analysis ===`,
-        `• GST Exclusive (+${R}%): Base ${P.toFixed(2)} + CGST ${(gstExclusive/2).toFixed(2)} + SGST ${(gstExclusive/2).toFixed(2)} = Total ${(P + gstExclusive).toFixed(2)}`,
-        `• GST Inclusive (${R}% embedded): Net Base ${gstInclusiveBase.toFixed(2)} | Tax Component ${gstInclusiveTax.toFixed(2)}`,
-        `• Loan Monthly EMI (${P} @ ${R}% for ${T} yrs): ${emi.toFixed(2)} / month`,
-        `• SIP Compounded Wealth (${Burn}/mo @ ${R}% for ${T} yrs): ${sipFV.toFixed(0)}`,
-        `• Startup Cash Runway (Reserve ${P} / Burn ${Burn}): ${(P / Burn).toFixed(1)} Months`
-      ].join("\n");
-
-      container.querySelector("#finOut").innerHTML = `<pre class="whitespace-pre-wrap">${text}</pre>`;
-      this.setArtifact({ toolName: tool.name, text, filename: `fintech-${tool.id}-report.txt` });
+      out.textContent = text;
+      this.setArtifact({ toolName: tool.name, text, filename: `fintech-${tool.id}-report.txt`, mimeType: "text/plain" });
     };
     ["#finA", "#finB", "#finC", "#finD"].forEach(s => container.querySelector(s).addEventListener("input", calcFin));
     calcFin();
@@ -1425,17 +1774,43 @@ const ToolEngine = {
 
   // 6. AI PROMPTS, LLM TOKEN & AGENT ENGINE
   renderAiLlmEngine(tool, container) {
+    const name = tool.name.toLowerCase();
+    const modes = [];
+    if (name.includes("token counter") || name.includes("token estimator")) modes.push("tokens");
+    if (name.includes("system prompt template") || name.includes("anthropic xml tag")) modes.push("sysprompt");
+    if (name.includes("json schema generator")) modes.push("jsonschema");
+    if (name.includes("rag text chunk")) modes.push("ragchunk");
+    if (name.includes("pii redactor")) modes.push("pii");
+    if (name.includes("prompt token-golf")) modes.push("minify");
+
+    if (!modes.length) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">This AI/LLM operation is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">No model-backed answer or unrelated prompt utility will be presented as its result.</p>
+        </div>
+      `;
+      return;
+    }
+
     container.innerHTML = `
       <div class="space-y-3">
         <div class="flex flex-wrap gap-2">
-          <button data-ai="tokens" class="px-3 py-1.5 rounded-xl accent-gradient text-white text-xs font-bold">Count Tokens & Cost</button>
-          <button data-ai="sysprompt" class="px-3 py-1.5 rounded-xl glass-btn text-xs font-semibold">Build System Prompt</button>
-          <button data-ai="jsonschema" class="px-3 py-1.5 rounded-xl glass-btn text-xs font-semibold">Tool JSON Schema</button>
-          <button data-ai="ragchunk" class="px-3 py-1.5 rounded-xl glass-btn text-xs font-semibold">Preview RAG Chunks</button>
-          <button data-ai="pii" class="px-3 py-1.5 rounded-xl glass-btn text-xs font-semibold">Redact PII</button>
+          ${modes.map((mode, index) => {
+            const labels = {
+              tokens: "Estimate Tokens",
+              sysprompt: "Build System Prompt",
+              jsonschema: "Generate Tool JSON Schema",
+              ragchunk: "Preview Character Chunks",
+              pii: "Redact Email/Phone",
+              minify: "Minify Prompt"
+            };
+            return `<button data-ai="${mode}" class="px-3 py-1.5 rounded-xl ${index === 0 ? "accent-gradient text-white" : "glass-btn"} text-xs font-bold">${labels[mode]}</button>`;
+          }).join("")}
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <textarea id="aiIn" rows="8" class="w-full p-3 rounded-2xl text-xs font-mono" placeholder="Paste prompt, document, or agent instructions...">You are an autonomous engineering & software reasoning agent. Break down complex problems into verifiable steps.</textarea>
+          <textarea id="aiIn" rows="8" class="w-full p-3 rounded-2xl text-xs font-mono" placeholder="Paste prompt, document, or agent instructions..."></textarea>
           <textarea id="aiOut" rows="8" readonly class="w-full p-3 rounded-2xl text-xs font-mono"></textarea>
         </div>
       </div>
@@ -1447,19 +1822,19 @@ const ToolEngine = {
       const v = inp.value;
       const chars = v.length;
       const words = v.trim() ? v.trim().split(/\s+/).length : 0;
-      const estTokens = Math.ceil(chars / 3.8);
+      const estTokens = Math.ceil(chars / 4);
 
       if (mode === "tokens") {
         out.value = [
-          `=== LLM Token & API Cost Report (${tool.name}) ===`,
+          `=== Approximate Token Estimate (${tool.name}) ===`,
           `Characters: ${chars} | Words: ${words}`,
-          `Estimated Tokens (~3.8 chars/token): ${estTokens} tokens`,
-          `Est. Cost @ $2.50 / 1M frontier tokens: $${((estTokens / 1e6) * 2.5).toFixed(6)}`,
-          `Est. Cost @ $0.15 / 1M fast flash tokens: $${((estTokens / 1e6) * 0.15).toFixed(6)}`,
-          `Est. Local VRAM (7B Q4_K_M GGUF): ~4.8 GB`
+          `Rough estimate (~4 characters/token): ${estTokens} tokens`,
+          `Token counts and costs vary by model, tokenizer, and provider pricing; this is not an exact quote.`
         ].join("\n");
       } else if (mode === "sysprompt") {
-        out.value = `<system_instructions>\n  <role>${tool.name} Specialist</role>\n  <objective>${v}</objective>\n  <guidelines>\n    - Provide deterministic, structured outputs.\n    - Validate edge cases rigorously.\n  </guidelines>\n</system_instructions>`;
+        out.value = name.includes("anthropic xml tag")
+          ? `<instructions>\n${v}\n</instructions>`
+          : `<system_instructions>\n  <role>${tool.name} Specialist</role>\n  <objective>${v}</objective>\n  <guidelines>\n    - Provide deterministic, structured outputs.\n    - Validate edge cases rigorously.\n  </guidelines>\n</system_instructions>`;
       } else if (mode === "jsonschema") {
         out.value = JSON.stringify({
           type: "function",
@@ -1474,22 +1849,51 @@ const ToolEngine = {
           }
         }, null, 2);
       } else if (mode === "ragchunk") {
-        const chunks = v.match(/.{1,120}/g) || [];
-        out.value = chunks.map((c, i) => `[Chunk #${i + 1}]: ${c.trim()}`).join("\n\n");
+        const chunks = v.match(/[\s\S]{1,120}/g) || [];
+        out.value = chunks.map((c, i) => `[Character chunk #${i + 1}]: ${c}`).join("\n\n");
       } else if (mode === "pii") {
         out.value = v
           .replace(/[\w.-]+@[\w.-]+\.\w+/g, "[REDACTED_EMAIL]")
           .replace(/\b\d{10,12}\b/g, "[REDACTED_PHONE]");
+        out.value += "\n\nNote: only email-like strings and 10–12 digit numbers are detected.";
+      } else if (mode === "minify") {
+        out.value = v.replace(/\s+/g, " ").trim();
       }
       this.setArtifact({ toolName: tool.name, text: out.value, filename: `ai-tool-${tool.id}.txt` });
     };
     container.querySelectorAll("[data-ai]").forEach(b => b.addEventListener("click", () => runAi(b.dataset.ai)));
-    inp.addEventListener("input", () => runAi("tokens"));
-    runAi("tokens");
+    inp.addEventListener("input", () => {
+      if (modes.includes("tokens")) runAi("tokens");
+    });
+    runAi(modes[0]);
   },
 
   // 7. DEVELOPER, SECURITY, CYBER-FORENSICS, WEB & DESIGN ENGINE
   renderDevSecurityEngine(tool, container) {
+    const name = tool.name.toLowerCase();
+    const supportedOps = new Set();
+    if (name.includes("json") && (name.includes("format") || name.includes("beautif"))) supportedOps.add("jsonFmt");
+    if (name.includes("json") && name.includes("minif")) supportedOps.add("jsonMin");
+    if (name.includes("base64") && !name.includes("data-uri") && (name.includes("encode") || name.includes("to base64"))) supportedOps.add("b64Enc");
+    if (name.includes("base64") && !name.includes("data-uri") && (name.includes("decode") || name.includes("from base64") || name.includes("to text"))) supportedOps.add("b64Dec");
+    if (name.includes("sha-256") || name.includes("sha256")) supportedOps.add("sha256");
+    if (name.includes("sha-512") || name.includes("sha512")) supportedOps.add("sha512");
+    if (name.includes("uuid") && (name.includes("generate") || name.includes("generator"))) supportedOps.add("uuid");
+    if (name.includes("password") && (name.includes("generate") || name.includes("generator"))) supportedOps.add("pass");
+    if (name.includes("rot13") && !name.includes("caesar")) supportedOps.add("rot13");
+    if (name.includes("defang") && !name.includes("refang")) supportedOps.add("defang");
+
+    if (!supportedOps.size) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">This developer/security operation is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">Available operations are selected by name; unrelated formatting or security results will not be substituted.</p>
+        </div>
+      `;
+      return;
+    }
+
     container.innerHTML = `
       <div class="space-y-3">
         <div class="flex flex-wrap gap-1.5">
@@ -1514,6 +1918,11 @@ const ToolEngine = {
 
     const inp = container.querySelector("#devInput");
     const out = container.querySelector("#devOutput");
+    container.querySelectorAll("[data-dev]").forEach(btn => {
+      if (!supportedOps.has(btn.dataset.dev)) btn.remove();
+    });
+    if (supportedOps.has("b64Dec")) inp.value = "SGVsbG8sIFdvcmxkIQ==";
+    else if (!supportedOps.has("jsonFmt") && !supportedOps.has("jsonMin")) inp.value = "OmniTool Hub";
 
     const runOp = async (op) => {
       const val = inp.value;
@@ -1530,15 +1939,30 @@ const ToolEngine = {
           out.value = Array.from({ length: 10 }, () => crypto.randomUUID()).join("\n");
         } else if (op === "pass") {
           const chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*()_+-=";
-          const arr = new Uint32Array(24);
-          crypto.getRandomValues(arr);
-          out.value = Array.from(arr, x => chars[x % chars.length]).join("");
+          const limit = 256 - (256 % chars.length);
+          let password = "";
+          while (password.length < 24) {
+            const randomBytes = crypto.getRandomValues(new Uint8Array(32));
+            for (const byte of randomBytes) {
+              if (byte < limit) password += chars[byte % chars.length];
+              if (password.length === 24) break;
+            }
+          }
+          out.value = password;
         } else if (op === "rot13") {
-          out.value = val.replace(/[a-zA-Z]/g, c => String.fromCharCode((c <= "Z" ? 90 : 122) >= (c = c.charCodeAt(0) + 13) ? c : c - 26));
+          out.value = val.replace(/[a-z]/gi, char => {
+            const base = char <= "Z" ? 65 : 97;
+            return String.fromCharCode(((char.charCodeAt(0) - base + 13) % 26) + base);
+          });
         } else if (op === "defang") {
           out.value = val.replace(/\./g, "[.]").replace(/http/gi, "hxxp");
         }
-        this.setArtifact({ toolName: tool.name, text: out.value, filename: `dev-${tool.id}-output.txt` });
+        this.setArtifact({
+          toolName: tool.name,
+          text: out.value,
+          filename: `dev-${tool.id}-output.txt`,
+          mimeType: "text/plain"
+        });
       } catch (e) {
         out.value = "Error: " + e.message;
       }
@@ -1547,19 +1971,39 @@ const ToolEngine = {
     container.querySelectorAll("[data-dev]").forEach(btn => {
       btn.addEventListener("click", () => runOp(btn.dataset.dev));
     });
-    runOp("jsonFmt");
+    runOp(supportedOps.values().next().value);
   },
 
   // 8. DATA & SPREADSHEET CSV/JSON ENGINE
   renderDataSpreadsheetEngine(tool, container) {
+    const name = tool.name.toLowerCase();
+    const mode = /csv[\s-]*to[\s-]*json/.test(name) ? "toJson"
+      : name.includes("duplicate") && name.includes("row") ? "dedup"
+      : name.includes("sort") && (name.includes("row") || name.includes("table")) ? "sort"
+      : name.includes("dataset statistics") ? "stats"
+      : null;
+    if (!mode) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">This data operation is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">This workspace currently supports CSV-to-JSON, duplicate-row removal, row sorting, and basic dataset statistics only.</p>
+        </div>
+      `;
+      return;
+    }
+
     container.innerHTML = `
       <div class="space-y-3">
         <div class="flex flex-wrap gap-2">
-          <button data-csv="toJson" class="px-3 py-1.5 rounded-xl accent-gradient text-white text-xs font-bold">CSV → JSON</button>
-          <button data-csv="dedup" class="px-3 py-1.5 rounded-xl glass-btn text-xs font-semibold">Deduplicate Rows</button>
-          <button data-csv="sort" class="px-3 py-1.5 rounded-xl glass-btn text-xs font-semibold">Sort Rows A→Z</button>
-          <button data-csv="stats" class="px-3 py-1.5 rounded-xl glass-btn text-xs font-semibold">Dataset Statistics</button>
+          <button data-csv="${mode}" class="px-3 py-1.5 rounded-xl accent-gradient text-white text-xs font-bold">${{
+            toJson: "CSV → JSON",
+            dedup: "Deduplicate Rows",
+            sort: "Sort Rows A→Z",
+            stats: "Dataset Statistics"
+          }[mode]}</button>
         </div>
+        <div id="csvStatus" class="text-xs theme-text-muted" role="status" aria-live="polite"></div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
           <textarea id="csvIn" rows="8" class="w-full p-3 rounded-2xl font-mono text-xs">name,domain,score\nAman,Robotics,98\nElena,AI,95\nLiam,Embedded,89\nAman,Robotics,98</textarea>
           <textarea id="csvOut" rows="8" readonly class="w-full p-3 rounded-2xl font-mono text-xs"></textarea>
@@ -1568,40 +2012,134 @@ const ToolEngine = {
     `;
     const csvIn = container.querySelector("#csvIn");
     const csvOut = container.querySelector("#csvOut");
+    const status = container.querySelector("#csvStatus");
+
+    const parseCsv = (source) => {
+      const rows = [];
+      let row = [];
+      let field = "";
+      let quoted = false;
+      let closedQuote = false;
+
+      for (let i = 0; i < source.length; i++) {
+        const char = source[i];
+        if (quoted) {
+          if (char === '"' && source[i + 1] === '"') {
+            field += '"';
+            i++;
+          } else if (char === '"') {
+            quoted = false;
+            closedQuote = true;
+          } else {
+            field += char;
+          }
+          continue;
+        }
+
+        if (char === '"' && field.length === 0 && !closedQuote) {
+          quoted = true;
+        } else if (char === "," || char === "\n" || char === "\r") {
+          row.push(field);
+          field = "";
+          closedQuote = false;
+          if (char !== ",") {
+            if (char === "\r" && source[i + 1] === "\n") i++;
+            if (!(row.length === 1 && row[0] === "")) rows.push(row);
+            row = [];
+          }
+        } else {
+          if (closedQuote) throw new Error("Unexpected characters after a closing quote.");
+          if (char === '"') throw new Error('Quote characters inside a CSV field must be escaped as "".');
+          field += char;
+        }
+      }
+
+      if (quoted) throw new Error("A quoted CSV field is not closed.");
+      if (field.length || row.length) {
+        row.push(field);
+        rows.push(row);
+      }
+      return rows;
+    };
+
+    const serializeCsv = (rows) => rows.map(row => row.map(value => {
+      const text = String(value ?? "");
+      return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }).join(",")).join("\n");
 
     const runCsv = (mode) => {
-      const lines = csvIn.value.trim().split(/\r?\n/).filter(Boolean);
-      if (!lines.length) return;
-      if (mode === "toJson") {
-        const headers = lines[0].split(",").map(h => h.trim());
-        const arr = lines.slice(1).map(line => {
-          const vals = line.split(",");
-          const obj = {};
-          headers.forEach((h, i) => obj[h] = vals[i]?.trim());
-          return obj;
+      try {
+        const rows = parseCsv(csvIn.value);
+        if (!rows.length) throw new Error("Enter CSV data first.");
+        const headers = rows[0].map(header => header.trim());
+        if (headers.some(header => !header)) throw new Error("Every column needs a header.");
+        if (new Set(headers).size !== headers.length) throw new Error("Column names must be unique.");
+        if (rows.slice(1).some(dataRow => dataRow.length > headers.length)) {
+          throw new Error("A data row contains more values than the header.");
+        }
+        const dataRows = rows.slice(1).map(dataRow =>
+          Array.from({ length: headers.length }, (_, index) => dataRow[index] ?? "")
+        );
+
+        if (mode === "toJson") {
+          csvOut.value = JSON.stringify(dataRows.map(dataRow =>
+            Object.fromEntries(headers.map((header, index) => [header, dataRow[index]]))
+          ), null, 2);
+        } else if (mode === "dedup") {
+          const uniqueRows = [...new Map(dataRows.map(dataRow => [JSON.stringify(dataRow), dataRow])).values()];
+          csvOut.value = serializeCsv([rows[0], ...uniqueRows]);
+        } else if (mode === "sort") {
+          const sortedRows = [...dataRows].sort((a, b) =>
+            a[0].localeCompare(b[0], undefined, { sensitivity: "base" })
+          );
+          csvOut.value = serializeCsv([rows[0], ...sortedRows]);
+        } else if (mode === "stats") {
+          csvOut.value = `Data rows: ${dataRows.length}\nColumns: ${headers.length}\nUnique data rows: ${new Set(dataRows.map(JSON.stringify)).size}`;
+        }
+        status.textContent = `${dataRows.length} data row(s), ${headers.length} column(s).`;
+        this.setArtifact({
+          toolName: tool.name,
+          text: csvOut.value,
+          filename: mode === "toJson" ? `data-${tool.id}.json` : `data-${tool.id}.${mode === "stats" ? "txt" : "csv"}`,
+          mimeType: mode === "toJson" ? "application/json" : mode === "stats" ? "text/plain" : "text/csv"
         });
-        csvOut.value = JSON.stringify(arr, null, 2);
-      } else if (mode === "dedup") {
-        csvOut.value = [...new Set(lines)].join("\n");
-      } else if (mode === "sort") {
-        csvOut.value = [lines[0], ...lines.slice(1).sort()].join("\n");
-      } else if (mode === "stats") {
-        csvOut.value = `Total Rows: ${lines.length}\nData Rows: ${lines.length - 1}\nColumns: ${lines[0].split(",").length}\nUnique Rows: ${new Set(lines).size}`;
+      } catch (error) {
+        csvOut.value = "";
+        status.textContent = error.message;
+        status.classList.add("text-rose-400");
+        return;
       }
-      this.setArtifact({ toolName: tool.name, text: csvOut.value, filename: `data-${tool.id}.json`, mimeType: "application/json" });
+      status.classList.remove("text-rose-400");
     };
     container.querySelectorAll("[data-csv]").forEach(b => b.addEventListener("click", () => runCsv(b.dataset.csv)));
-    runCsv("toJson");
+    runCsv(mode);
   },
 
   // 9. AUDIO, VIDEO & CREATOR ENGINE
   renderMediaEngine(tool, container) {
     const n = tool.name.toLowerCase();
-    if (n.includes("speech") || n.includes("tts") || n.includes("reader") || n.includes("teleprompter")) {
+    const isTextToSpeech = n.includes("generate speech from text") || n.includes("text to speech") || n.includes("tts reader");
+    const supportsFrameCapture = n.includes("video thumbnail") || n.includes("capture video frame");
+    const supportsMetadata = n.includes("metadata") || n.includes("inspect video");
+    const supportsPlaybackSpeed = n.includes("playback speed") || n.includes("video speed") || n.includes("audio speed");
+
+    if (n.includes("transcribe")) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">Speech transcription is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">The browser speech-synthesis API reads text aloud; it cannot transcribe audio into text.</p>
+        </div>
+      `;
+      return;
+    }
+
+    if (isTextToSpeech) {
       container.innerHTML = `
         <div class="space-y-3 glass-subpanel p-4 rounded-2xl">
-          <label class="text-xs theme-text-muted block">Enter Script or Text for Browser Speech Synthesis (TTS) & Teleprompter</label>
-          <textarea id="ttsInput" rows="5" class="w-full p-3 rounded-xl text-sm">Welcome to OmniTool Hub v5.0! Every tool features verified inputs, instant sharing without downloading, and complete client-side privacy.</textarea>
+          <label class="text-xs theme-text-muted block">Enter text to read aloud with browser speech synthesis.</label>
+          <textarea id="ttsInput" rows="5" class="w-full p-3 rounded-xl text-sm" placeholder="Type text to read aloud..."></textarea>
+          <p id="ttsStatus" class="text-xs theme-text-muted" role="status" aria-live="polite"></p>
           <div class="flex gap-2">
             <button id="speakBtn" class="px-4 py-2 rounded-xl accent-gradient text-white text-xs font-bold">Speak Aloud (TTS)</button>
             <button id="stopSpeakBtn" class="px-4 py-2 rounded-xl glass-btn text-rose-400 text-xs font-semibold">Stop Audio</button>
@@ -1612,6 +2150,10 @@ const ToolEngine = {
       ta.addEventListener("input", () => this.setArtifact({ toolName: tool.name, text: ta.value, filename: `script-${tool.id}.txt` }));
       this.setArtifact({ toolName: tool.name, text: ta.value, filename: `script-${tool.id}.txt` });
       container.querySelector("#speakBtn").addEventListener("click", () => {
+        if (!("speechSynthesis" in window) || typeof SpeechSynthesisUtterance !== "function") {
+          container.querySelector("#ttsStatus").textContent = "Speech synthesis is unavailable in this browser.";
+          return;
+        }
         window.speechSynthesis.cancel();
         window.speechSynthesis.speak(new SpeechSynthesisUtterance(ta.value));
       });
@@ -1619,43 +2161,69 @@ const ToolEngine = {
       return;
     }
 
+    if (!supportsFrameCapture && !supportsMetadata && !supportsPlaybackSpeed) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">This audio/video operation is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">The media preview can inspect and play files, but it will not pretend to convert or edit them.</p>
+        </div>
+      `;
+      return;
+    }
+
     container.innerHTML = `
       <div class="space-y-4">
         <div class="glass-subpanel p-4 rounded-2xl flex flex-wrap items-center justify-between gap-3">
-          <input type="file" id="mediaFileInput" accept="video/*,audio/*,image/gif" class="text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white" />
-          <div class="flex items-center gap-2">
+          <input type="file" id="mediaFileInput" accept="${supportsFrameCapture ? "video/*" : "video/*,audio/*"}" class="text-xs file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-indigo-600 file:text-white" />
+          <div class="flex items-center gap-2 ${supportsPlaybackSpeed ? "" : "hidden"}">
             <select id="mediaSpeed" class="px-2.5 py-1.5 rounded-xl text-xs">
               <option value="0.5">0.5x Slow-Mo</option>
               <option value="1" selected>1.0x Normal</option>
               <option value="1.5">1.5x Fast</option>
               <option value="2">2.0x Double</option>
             </select>
-            <button id="snapFrameBtn" class="px-3.5 py-1.5 rounded-xl accent-gradient text-white text-xs font-bold">Capture Video Frame</button>
+            <button id="snapFrameBtn" class="px-3.5 py-1.5 rounded-xl accent-gradient text-white text-xs font-bold ${supportsFrameCapture ? "" : "hidden"}">Capture Video Frame</button>
           </div>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div class="glass-subpanel p-3 rounded-2xl flex flex-col items-center justify-center">
             <video id="mediaPlayer" controls class="max-h-56 w-full rounded-xl bg-black"></video>
             <div id="mediaMeta" class="text-[11px] font-mono theme-text-muted mt-2">Select any video or audio file to inspect or capture frames</div>
+            <div class="text-[10px] theme-text-muted mt-1">Playback controls affect preview only; the source file is not modified.</div>
           </div>
           <div class="glass-subpanel p-3 rounded-2xl flex flex-col items-center justify-center">
             <canvas id="frameCanvas" width="320" height="180" class="max-h-56 w-full rounded-xl border theme-border bg-slate-950"></canvas>
-            <span class="text-[11px] text-emerald-400 mt-2">Captured Frame (Ready for Direct Share!)</span>
+            <span class="text-[11px] text-emerald-400 mt-2">${supportsFrameCapture ? "Captured frame" : "Preview"}</span>
           </div>
         </div>
       </div>
     `;
     const player = container.querySelector("#mediaPlayer");
     const fCanvas = container.querySelector("#frameCanvas");
+    let mediaUrl = null;
+    this.activeCleanup = () => {
+      player.pause();
+      player.removeAttribute("src");
+      player.load();
+      if (mediaUrl) URL.revokeObjectURL(mediaUrl);
+    };
     container.querySelector("#mediaFileInput").addEventListener("change", (e) => {
       const f = e.target.files[0];
       if (!f) return;
-      player.src = URL.createObjectURL(f);
+      if (mediaUrl) URL.revokeObjectURL(mediaUrl);
+      mediaUrl = URL.createObjectURL(f);
+      player.src = mediaUrl;
       player.onloadedmetadata = () => {
         const info = `${f.name} | ${(f.size/1024/1024).toFixed(2)} MB | Duration: ${player.duration.toFixed(1)}s`;
         container.querySelector("#mediaMeta").textContent = info;
-        this.setArtifact({ toolName: tool.name, text: info, blob: f, filename: f.name, mimeType: f.type });
+        if (supportsMetadata) {
+          this.setArtifact({ toolName: tool.name, text: info, filename: `media-metadata-${tool.id}.txt`, mimeType: "text/plain" });
+        }
       };
+    });
+    player.addEventListener("error", () => {
+      container.querySelector("#mediaMeta").textContent = "This media file could not be previewed in the browser.";
     });
     container.querySelector("#mediaSpeed").addEventListener("change", (e) => {
       player.playbackRate = parseFloat(e.target.value);
@@ -1664,77 +2232,158 @@ const ToolEngine = {
       if (!player.videoWidth) return alert("Please load a video file first.");
       fCanvas.width = player.videoWidth;
       fCanvas.height = player.videoHeight;
-      fCanvas.getContext("2d").drawImage(player, 0, 0);
+      const context = fCanvas.getContext("2d");
+      if (!context) return alert("Canvas is unavailable for frame capture.");
+      context.drawImage(player, 0, 0);
       fCanvas.toBlob((blob) => {
+        if (!blob) return;
         this.setArtifact({ toolName: tool.name, text: "Captured Video Frame", blob, filename: "video-frame.png", mimeType: "image/png" });
       });
     });
   },
 
+  evaluateArithmeticExpression(expression) {
+    const compact = expression.replace(/\s/g, "");
+    const tokens = compact.match(/\d+(?:\.\d*)?|\.\d+|[()+\-*/%^]/g) || [];
+    if (!compact || tokens.join("") !== compact) {
+      throw new Error("Use numbers, parentheses, and +, -, *, /, %, or ^ operators only.");
+    }
+
+    let position = 0;
+    const parsePrimary = () => {
+      const token = tokens[position++];
+      if (token === "(") {
+        const value = parseExpression();
+        if (tokens[position++] !== ")") throw new Error("Missing closing parenthesis.");
+        return value;
+      }
+      if (token === undefined || !/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(token)) {
+        throw new Error("Expected a number or parenthesized expression.");
+      }
+      return Number(token);
+    };
+    const parsePower = () => {
+      const value = parsePrimary();
+      if (tokens[position] !== "^") return value;
+      position++;
+      return value ** parseUnary();
+    };
+    const parseUnary = () => {
+      if (tokens[position] === "+") {
+        position++;
+        return parseUnary();
+      }
+      if (tokens[position] === "-") {
+        position++;
+        return -parseUnary();
+      }
+      return parsePower();
+    };
+    const parseTerm = () => {
+      let value = parseUnary();
+      while (["*", "/", "%"].includes(tokens[position])) {
+        const operator = tokens[position++];
+        const right = parseUnary();
+        if ((operator === "/" || operator === "%") && right === 0) {
+          throw new Error("Division by zero is not defined.");
+        }
+        if (operator === "*") value *= right;
+        else if (operator === "/") value /= right;
+        else value %= right;
+      }
+      return value;
+    };
+    const parseExpression = () => {
+      let value = parseTerm();
+      while (tokens[position] === "+" || tokens[position] === "-") {
+        const operator = tokens[position++];
+        const right = parseTerm();
+        value = operator === "+" ? value + right : value - right;
+      }
+      return value;
+    };
+
+    const result = parseExpression();
+    if (position !== tokens.length) throw new Error("Check the expression syntax and parentheses.");
+    if (!Number.isFinite(result)) throw new Error("The result is outside the supported numeric range.");
+    return result;
+  },
+
   // 10. CALCULATORS, SCIENCE, PRODUCTIVITY & EDUCATION ENGINE
   renderCalculatorProductivityEngine(tool, container) {
+    const isBasicCalculator = tool.name.toLowerCase() === "basic calculator";
+    if (!isBasicCalculator) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">This calculation or conversion is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">This workspace supports basic arithmetic expressions only; it will not substitute an unrelated calculation.</p>
+        </div>
+      `;
+      return;
+    }
+
     container.innerHTML = `
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="glass-subpanel p-4 rounded-2xl space-y-3">
-          <label class="text-xs font-bold accent-text block">${tool.name} — Live Evaluator</label>
+          <label class="text-xs font-bold accent-text block">${tool.name}</label>
+          <p class="text-[11px] theme-text-muted">Evaluate an arithmetic expression using +, −, ×, ÷, %, ^, and parentheses.</p>
           <input id="calcExpr" type="text" value="(250 * 4) + 180" class="w-full px-3.5 py-2 rounded-xl font-mono text-sm" />
-          <div class="grid grid-cols-2 gap-2">
-            <div>
-              <label class="text-[11px] theme-text-muted">Input A (Value / CGPA / Base)</label>
-              <input id="numA" type="number" value="9.2" step="any" class="w-full px-3 py-1.5 rounded-lg text-xs" />
-            </div>
-            <div>
-              <label class="text-[11px] theme-text-muted">Input B (Factor / Total / %)</label>
-              <input id="numB" type="number" value="9.5" step="any" class="w-full px-3 py-1.5 rounded-lg text-xs" />
-            </div>
-          </div>
         </div>
-        <div id="calcResultPanel" class="glass-subpanel p-4 rounded-2xl font-mono text-xs space-y-1.5"></div>
+        <div id="calcResultPanel" class="glass-subpanel p-4 rounded-2xl font-mono text-xs space-y-1.5" role="status" aria-live="polite"></div>
       </div>
     `;
 
     const calc = () => {
       const expr = container.querySelector("#calcExpr").value;
-      const A = parseFloat(container.querySelector("#numA").value) || 0;
-      const B = parseFloat(container.querySelector("#numB").value) || 1;
-      let mathRes = "N/A";
       try {
-        mathRes = Function(`"use strict"; return (${expr.replace(/[^0-9+\-*/().%^]/g, "")})`)();
-      } catch {}
-      const intA = Math.max(0, Math.floor(Math.abs(A)));
-      const report = [
-        `Expression Result: ${mathRes}`,
-        `A × B: ${(A * B).toFixed(4)} | A ÷ B: ${(A / B).toFixed(4)}`,
-        `CGPA (${A}) → Percentage: ${(A * 9.5).toFixed(2)}%`,
-        `Binary(${intA}): ${intA.toString(2)} | Hex: 0x${intA.toString(16).toUpperCase()}`,
-        `Current Unix Timestamp: ${Math.floor(Date.now() / 1000)}`
-      ].join("\n");
-
-      container.querySelector("#calcResultPanel").innerHTML = `<pre class="whitespace-pre-wrap">${report}</pre>`;
-      this.setArtifact({ toolName: tool.name, text: report, filename: `calculation-${tool.id}.txt` });
+        const mathRes = this.evaluateArithmeticExpression(expr);
+        const result = `Result: ${mathRes}`;
+        container.querySelector("#calcResultPanel").textContent = result;
+        this.setArtifact({ toolName: tool.name, text: result, filename: `calculation-${tool.id}.txt` });
+      } catch (error) {
+        container.querySelector("#calcResultPanel").textContent = `Calculation error: ${error.message}`;
+      }
     };
-    ["#calcExpr", "#numA", "#numB"].forEach(s => container.querySelector(s).addEventListener("input", calc));
+    container.querySelector("#calcExpr").addEventListener("input", calc);
     calc();
   },
 
   // 11. TEXT & UNIVERSAL MULTI-TOOL WORKBENCH
   renderTextAndUniversalEngine(tool, container) {
+    const name = tool.name.toLowerCase();
+    const actions = [];
+    if (name.includes("uppercase converter")) actions.push(["upper", "UPPERCASE"]);
+    if (name.includes("lowercase converter")) actions.push(["lower", "lowercase"]);
+    if (name.includes("title case converter")) actions.push(["title", "Title Case"]);
+    if (name === "reverse text") actions.push(["reverse", "Reverse"]);
+    if (name.includes("duplicate lines")) actions.push(["dedup", "Deduplicate Lines"]);
+    if (name.includes("sort lines alphabetically")) actions.push(["sort", "Sort A–Z"]);
+    if (name.includes("slug generator")) actions.push(["slug", "Slugify"]);
+    if (name.includes("extract email addresses")) actions.push(["emails", "Extract Emails"]);
+    if (name.includes("extract urls from text")) actions.push(["urls", "Extract URLs"]);
+    if (name.includes("remove extra spaces")) actions.push(["clean", "Trim Whitespace"]);
+    const isTextCounter = name.includes("word counter") || name.includes("character counter") ||
+      name.includes("reading-time calculator");
+
+    if (!actions.length && !isTextCounter) {
+      container.innerHTML = `
+        <div class="p-5 rounded-2xl glass-subpanel space-y-2">
+          <h3 class="text-sm font-bold theme-text-primary">${tool.name}</h3>
+          <p class="text-sm text-amber-400 font-semibold">This text operation is not implemented yet.</p>
+          <p class="text-xs theme-text-muted">This workspace supports selected case/line utilities, text extraction, slug creation, whitespace cleanup, and basic word/character/read-time counts.</p>
+        </div>
+      `;
+      return;
+    }
+
     container.innerHTML = `
       <div class="space-y-3">
         <div class="flex flex-wrap gap-1.5">
-          <button data-txt="upper" class="px-2.5 py-1 rounded-xl glass-btn text-xs font-semibold">UPPERCASE</button>
-          <button data-txt="lower" class="px-2.5 py-1 rounded-xl glass-btn text-xs font-semibold">lowercase</button>
-          <button data-txt="title" class="px-2.5 py-1 rounded-xl glass-btn text-xs font-semibold">Title Case</button>
-          <button data-txt="reverse" class="px-2.5 py-1 rounded-xl glass-btn text-xs font-semibold">Reverse</button>
-          <button data-txt="dedup" class="px-2.5 py-1 rounded-xl glass-btn text-xs font-semibold">Deduplicate Lines</button>
-          <button data-txt="sort" class="px-2.5 py-1 rounded-xl glass-btn text-xs font-semibold">Sort A–Z</button>
-          <button data-txt="slug" class="px-2.5 py-1 rounded-xl glass-btn text-xs font-semibold">Slugify</button>
-          <button data-txt="emails" class="px-2.5 py-1 rounded-xl glass-btn text-xs font-semibold">Extract Emails</button>
-          <button data-txt="urls" class="px-2.5 py-1 rounded-xl glass-btn text-xs font-semibold">Extract URLs</button>
-          <button data-txt="clean" class="px-2.5 py-1 rounded-xl glass-btn text-xs font-semibold">Trim Whitespace</button>
+          ${actions.map(([action, label]) => `<button data-txt="${action}" class="px-2.5 py-1 rounded-xl glass-btn text-xs font-semibold">${label}</button>`).join("")}
         </div>
 
-        <textarea id="uniTextInput" rows="7" class="w-full p-3.5 rounded-2xl text-sm" placeholder="Type or paste content for ${tool.name}...">OmniTool Hub v5.0 — 1,050+ Verified Client-Side Utilities with Direct Sharing & 10 Live Themes!</textarea>
+        <textarea id="uniTextInput" rows="7" class="w-full p-3.5 rounded-2xl text-sm" placeholder="Type or paste text for ${tool.name}..."></textarea>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
           <div class="p-2.5 rounded-xl glass-subpanel"><div class="text-sm font-extrabold accent-text" id="stWords">0</div><div class="text-[10px] theme-text-muted uppercase">Words</div></div>

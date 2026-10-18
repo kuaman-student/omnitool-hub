@@ -1,4 +1,4 @@
-// Main Application Controller for OmniTool Hub v4.0 Ultra (100% English)
+// Main Application Controller for OmniTool Hub v5.0
 
 const THEMES_LIST = [
   { id: "nebula", name: "Nebula Glass", swatch: "linear-gradient(135deg,#6366f1,#a855f7)" },
@@ -182,8 +182,8 @@ function renderToolsGrid() {
     document.getElementById("activeCategoryDesc").textContent = "Quick access to your starred tools and calculators.";
   } else if (AppState.activeCategory === "all") {
     document.getElementById("activeCategoryPill").textContent = "All 28 Categories";
-    document.getElementById("activeCategoryTitle").textContent = `The 1,050+ All-in-One Digital Swiss Army Knife`;
-    document.getElementById("activeCategoryDesc").textContent = "Every single operation has its own dedicated interactive workspace — PDF manipulation, HTML5 Image Studio, Audio/Video tools, Developer formatters, AI Prompt Engineering, ROS2 Robotics, FinTech calculators, and Cyber-Defense utilities.";
+    document.getElementById("activeCategoryTitle").textContent = "Browse the 1,050+ Tool Catalog";
+    document.getElementById("activeCategoryDesc").textContent = "Search tools across 28 categories. Implemented workspaces perform their stated operation; unfinished tools are clearly marked and will not return unrelated results.";
   } else {
     const catObj = CATEGORIES_DATA.find(c => c.id === AppState.activeCategory);
     if (catObj) {

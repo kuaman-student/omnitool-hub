@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>OmniTool Hub v5.0 — 1,050+ Verified Client-Side Utilities</title>
+  <title>OmniTool Hub v5.0 — 1,050+ Client-Side Tool Catalog</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Fonts -->
@@ -18,6 +18,8 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
   <!-- QRCode.js for real QR generation -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <!-- jsQR for QR decoding when BarcodeDetector is unavailable -->
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
   <!-- Custom Theme & Interactive Styles -->
   <link rel="stylesheet" href="styles.css" />
 </head>
@@ -46,9 +48,9 @@
           <div>
             <div class="flex items-center gap-2">
               <span class="font-extrabold text-base sm:text-lg tracking-tight theme-text-primary">OmniTool</span>
-              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full accent-badge">v5.0 • 1,050+</span>
+              <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded-full accent-badge">v5.0 • 1,050+ entries</span>
             </div>
-            <p class="text-[11px] theme-text-muted hidden xl:block">Context-Aware Local Utility OS • Instant Share & Download</p>
+            <p class="text-[11px] theme-text-muted hidden xl:block">Client-Side Tool Catalog • Search, Share & Download</p>
           </div>
         </div>
       </div>
@@ -60,7 +62,7 @@
           <input
             id="globalSearchInput"
             type="text"
-            placeholder="Search 1,050+ tools (#40 Images to PDF, ROS2, GST, QR, ZIP, PID)..."
+            placeholder="Search 1,050+ catalog entries (#40 Images to PDF, ROS2, GST, QR, ZIP, PID)..."
             class="w-full pl-10 pr-16 py-2 rounded-2xl text-xs sm:text-sm theme-input transition"
           />
           <kbd class="hidden sm:inline-block absolute right-3 text-[10px] font-mono px-1.5 py-0.5 rounded glass-badge">Ctrl K</kbd>
@@ -122,8 +124,8 @@
       </div>
       <nav id="categoryList" class="flex-1 overflow-y-auto p-2.5 space-y-1 custom-scrollbar"></nav>
       <div class="p-3 border-t theme-border text-[11px] theme-text-muted flex items-center justify-between shrink-0">
-        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> 100% Client-Side</span>
-        <span class="font-mono font-semibold accent-text">v5.0 Verified</span>
+        <span class="flex items-center gap-1.5"><span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Local File Processing</span>
+        <span class="font-mono font-semibold accent-text">v5.0 Catalog</span>
       </div>
     </aside>
 
@@ -136,21 +138,21 @@
               <span id="activeCategoryPill" class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full accent-badge">All 28 Categories</span>
               <span id="showingCountText" class="text-xs font-mono theme-text-muted">Showing 1,050 tools</span>
               <span class="text-[11px] font-medium px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
-                <i data-lucide="check-circle-2" class="w-3 h-3"></i> Context-Verified Inputs & Outputs
+                <i data-lucide="info" class="w-3 h-3"></i> Tool support is identified in each workspace
               </span>
             </div>
             <h1 id="activeCategoryTitle" class="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight theme-text-primary">
-              The 1,050+ All-in-One Digital Swiss Army Knife
+              Browse the 1,050+ Tool Catalog
             </h1>
             <p id="activeCategoryDesc" class="text-xs sm:text-sm theme-text-muted leading-relaxed">
-              Every tool now dynamically adapts its exact file uploader, controls, and output engine to match its specific task — from Images-to-PDF and Base64-to-Image to Live Screen Recording, JSZip Archiving, and PID Oscilloscopes.
+              This catalog lists 1,050 tool entries. Implemented workspaces perform their stated operation; tools that are not ready yet are identified instead of producing unrelated output.
             </p>
           </div>
 
           <div class="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full xl:w-auto shrink-0">
             <div class="glass-subpanel rounded-2xl px-4 py-3 text-center flex-1 sm:flex-initial">
               <div class="text-lg sm:text-xl font-extrabold theme-text-primary" id="heroTotalCount">1,050</div>
-              <div class="text-[10px] theme-text-muted uppercase tracking-wider">Verified Tools</div>
+              <div class="text-[10px] theme-text-muted uppercase tracking-wider">Catalog entries</div>
             </div>
             <div class="glass-subpanel rounded-2xl px-4 py-3 text-center flex-1 sm:flex-initial">
               <div class="text-lg sm:text-xl font-extrabold accent-text">10</div>
@@ -199,7 +201,7 @@
       <span class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full accent-badge">Interactive User Guide</span>
       <h1 class="text-2xl sm:text-4xl font-extrabold theme-text-primary mt-3">How to Use the 1,050+ Tools</h1>
       <p class="text-sm sm:text-base theme-text-muted mt-2 max-w-3xl">
-        Every tool is tailored to its exact operation — whether you are converting multiple images into a single PDF (#40), recording your screen (#145), creating a ZIP archive (#297), or tuning a PID controller (#805).
+        The catalog groups common utilities into shared workspaces. Each workspace shows the operation it actually supports; unfinished operations are clearly marked and do not generate substitute results.
       </p>
     </div>
 
@@ -212,7 +214,7 @@
       <div class="p-5 rounded-2xl glass-card space-y-2">
         <div class="w-10 h-10 rounded-xl accent-badge flex items-center justify-center font-extrabold text-sm">02</div>
         <h3 class="font-bold theme-text-primary text-base">Task-Specific Inputs</h3>
-        <p class="text-xs theme-text-muted leading-relaxed">Each workspace automatically shows the right input: image uploaders for <i>Images to PDF</i>, text editors for <i>Word/Text to PDF</i>, and live camera/mic streams for <i>Recorders</i>.</p>
+        <p class="text-xs theme-text-muted leading-relaxed">Workspaces show inputs for implemented operations. If an operation is not ready, the page says so instead of treating another file type as valid input.</p>
       </div>
       <div class="p-5 rounded-2xl glass-card space-y-2">
         <div class="w-10 h-10 rounded-xl accent-badge flex items-center justify-center font-extrabold text-sm">03</div>
@@ -230,10 +232,10 @@
   <!-- PAGE 3: ARCHITECTURE & PRIVACY -->
   <div id="page-privacy" class="page-section hidden relative z-10 flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 lg:p-10 space-y-8">
     <div class="rounded-3xl glass-card p-6 sm:p-8">
-      <span class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Zero-Server Privacy Guarantee</span>
+      <span class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Local Processing Details</span>
       <h1 class="text-2xl sm:text-4xl font-extrabold theme-text-primary mt-3">How This Platform Works & Where Your Data Goes</h1>
       <p class="text-sm sm:text-base theme-text-muted mt-2 max-w-3xl">
-        <b>OmniTool Hub executes 100% of its processing locally inside your browser sandbox.</b> Your files, images, PDFs, audio recordings, and passwords never leave your device.
+        <b>Implemented file operations process files locally in your browser.</b> OmniTool Hub does not upload files to a processing server. The page and its libraries load from external CDNs, and using browser sharing or a linked external service can send content to the destination you choose.
       </p>
     </div>
 
@@ -241,7 +243,7 @@
       <div class="p-5 rounded-2xl glass-card space-y-2">
         <div class="text-xs font-mono accent-text font-bold">STAGE 1 • LOCAL INGESTION</div>
         <h3 class="text-base font-bold theme-text-primary">Browser Memory (`ArrayBuffer`)</h3>
-        <p class="text-xs theme-text-muted leading-relaxed">Files are read directly into volatile local RAM using the `FileReader` and `URL.createObjectURL` APIs. Zero external network requests are made.</p>
+        <p class="text-xs theme-text-muted leading-relaxed">Supported operations read files in browser memory. Files are not uploaded for processing; the page does load its interface and libraries from external CDNs.</p>
       </div>
       <div class="p-5 rounded-2xl glass-card space-y-2 border-emerald-500/40">
         <div class="text-xs font-mono text-emerald-400 font-bold">STAGE 2 • IN-BROWSER COMPUTE</div>
@@ -263,7 +265,7 @@
         <span class="text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30">Direct Developer Support Desk</span>
         <h1 class="text-2xl sm:text-3xl font-extrabold theme-text-primary mt-3">Submit a Complaint, Bug Report, or Feature Request</h1>
         <p class="text-xs sm:text-sm theme-text-muted mt-1">
-          Found an issue with any of the 1,050+ tools? Send a formatted support ticket directly to <b>Aman Kumar</b>.
+          Found an issue with a catalog entry or implemented operation? Send a formatted support ticket directly to <b>Aman Kumar</b>.
         </p>
       </div>
       <div class="glass-subpanel rounded-2xl p-4 shrink-0 border border-rose-500/30">
@@ -365,7 +367,7 @@
             <div class="flex flex-wrap items-center gap-2">
               <span id="modalToolId" class="text-xs font-mono font-bold px-2 py-0.5 rounded-md glass-badge">#1</span>
               <h2 id="modalToolTitle" class="text-base sm:text-lg font-extrabold theme-text-primary truncate">Tool Name</h2>
-              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Verified Studio</span>
+              <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">Catalog entry</span>
             </div>
             <p id="modalToolCategory" class="text-xs theme-text-muted mt-0.5 truncate">Category Name</p>
           </div>
